@@ -1,0 +1,299 @@
+@using Typer.Domain.Enums
+@implements IAsyncDisposable
+
+<div class="match-card">
+
+    <!-- ── Kickoff + status + żywa minuta ───────────────────── -->
+    <div class="match-kickoff">
+        <span class="kickoff-time">@Match.KickOffUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+
+        @if (Match.Status == "InProgress")
+        {
+            <span class="live-badge">
+                <span class="live-dot"></span>
+                <span class="live-minute">@LiveMinute</span>
+            </span>
+        }
+
+        <span class="match-status match-status--@Match.Status.ToLowerInvariant()">@StatusLabel</span>
+    </div>
+
+    <!-- ── Drużyny + wynik ──────────────────────────────────── -->
+    <div class="match-body">
+
+        <div class="match-team match-team--home">
+            @if (!string.IsNullOrEmpty(Match.HomeTeamFlagUrl))
+            {
+                <img src="@Match.HomeTeamFlagUrl" alt="@Match.HomeTeamName" class="match-team__flag" />
+            }
+            <span class="match-team__name">@Match.HomeTeamName</span>
+        </div>
+
+        <div class="match-score">
+            @if (Match.Status != "Scheduled")
+            {
+                <span class="match-score__actual">@Match.HomeScore – @Match.AwayScore</span>
+            }
+            else
+            {
+                <span class="match-score__vs">vs</span>
+            }
+        </div>
+
+        <div class="match-team match-team--away">
+            <span class="match-team__name">@Match.AwayTeamName</span>
+            @if (!string.IsNullOrEmpty(Match.AwayTeamFlagUrl))
+            {
+                <img src="@Match.AwayTeamFlagUrl" alt="@Match.AwayTeamName" class="match-team__flag" />
+            }
+        </div>
+
+    </div>
+
+    <!-- ── Strzelcy pod drużynami chronologicznie ────────────── -->
+    @if (Match.GoalScorers.Any())
+    {
+        <div class="match-scorers">
+            <div class="match-scorers__side match-scorers__side--home">
+                @foreach (var g in Match.GoalScorers.Where(x => x.IsHomeTeam).OrderBy(x => x.Minute))
+                {
+                    <span class="goal-entry">
+                        <span class="goal-name">@g.PlayerName@GoalSuffix(g)</span>
+                        <span class="goal-minute">⚽ @g.Minute'</span>
+                    </span>
+                }
+            </div>
+            <div class="match-scorers__side match-scorers__side--away">
+                @foreach (var g in Match.GoalScorers.Where(x => !x.IsHomeTeam).OrderBy(x => x.Minute))
+                {
+                    <span class="goal-entry">
+                        <span class="goal-minute">@g.Minute' ⚽</span>
+                        <span class="goal-name">@g.PlayerName@GoalSuffix(g)</span>
+                    </span>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- ── Panel typowania (tylko zalogowani) ──────────────── -->
+    @if (IsAuthenticated)
+    {
+        <div class="match-prediction">
+
+            <div class="prediction-header">
+                <span class="pred-status pred-status--@Match.PredictionStatus.ToLowerInvariant()">
+                    @PredictionStatusIcon @PredictionStatusLabel
+                </span>
+
+                @if (Match.PointsAwarded.HasValue)
+                {
+                    <div class="points-summary">
+                        <span class="points-total points-badge--@PointsBadgeClass">
+                            @Match.PointsAwarded pkt
+                        </span>
+                        @if (HasBreakdown)
+                        {
+                            <div class="points-breakdown">
+                                @if (Match.BasePoints is > 0)
+                                {
+                                    <span class="pts-chip pts-chip--base" title="Typ wyniku">
+                                        ⚽ @Match.BasePoints
+                                    </span>
+                                }
+                                @if (Match.TeamBonusPoints is > 0)
+                                {
+                                    <span class="pts-chip pts-chip--team" title="Bonus za ulubioną drużynę">
+                                        ★ +@Match.TeamBonusPoints
+                                    </span>
+                                }
+                                @if (Match.PlayerGoalPoints is > 0)
+                                {
+                                    <span class="pts-chip pts-chip--player" title="Gole ulubionego zawodnika">
+                                        👟 +@Match.PlayerGoalPoints
+                                    </span>
+                                }
+                                @if (Match.BasePoints is 0 && Match.PointsAwarded is 0)
+                                {
+                                    <span class="pts-chip pts-chip--zero">brak trafienia</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            @if (Match.PredictionStatus == "Open")
+            {
+                <div class="match-prediction__inputs">
+                    <span class="prediction-hint">Twój typ:</span>
+                    <input type="number" min="0" max="99"
+                           class="prediction-input"
+                           @bind="_predictedHome" @bind:event="oninput" />
+                    <span class="prediction-separator">:</span>
+                    <input type="number" min="0" max="99"
+                           class="prediction-input"
+                           @bind="_predictedAway" @bind:event="oninput" />
+                    <button class="btn-predict"
+                            disabled="@(!CanSubmit)"
+                            @onclick="HandleSubmit">
+                        Zatwierdź
+                    </button>
+                    @if (_saved)
+                    {
+                        <span class="prediction-saved">✓ Zapisano</span>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="match-prediction__result">
+                    @if (Match.PredictedHomeScore.HasValue)
+                    {
+                        <span class="prediction-hint">Twój typ:</span>
+                        <span class="prediction-value @PredictionValueClass">
+                            @Match.PredictedHomeScore – @Match.PredictedAwayScore
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="prediction-empty">Brak typu</span>
+                    }
+                </div>
+            }
+
+        </div>
+    }
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MatchDetailDto Match { get; set; } = default!;
+    [Parameter] public bool IsAuthenticated { get; set; }
+    [Parameter] public EventCallback<(Guid MatchId, int Home, int Away)> OnPredictionSubmit { get; set; }
+
+    private int? _predictedHome;
+    private int? _predictedAway;
+    private bool _saved;
+
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _cts;
+
+    protected override void OnParametersSet()
+    {
+        if (_predictedHome is null && Match.PredictedHomeScore.HasValue)
+            _predictedHome = Match.PredictedHomeScore;
+
+        if (_predictedAway is null && Match.PredictedAwayScore.HasValue)
+            _predictedAway = Match.PredictedAwayScore;
+
+        _saved = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || Match.Status != "InProgress") return;
+
+        _cts   = new CancellationTokenSource();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+        _ = RunTimerAsync(_cts.Token);
+        await Task.CompletedTask;
+    }
+
+    private async Task RunTimerAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (await _timer!.WaitForNextTickAsync(ct))
+                await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _timer?.Dispose();
+        await Task.CompletedTask;
+    }
+
+    // ── Żywa minuta meczu ───────────────────────────────────────
+    private string LiveMinute
+    {
+        get
+        {
+            var elapsed = (int)(DateTime.UtcNow - Match.KickOffUtc).TotalMinutes;
+            if (elapsed <= 0)  return "0'";
+            if (elapsed <= 45) return $"{elapsed}'";
+            // przerwa trwa ~15 min (45–60 od kickoffa)
+            if (elapsed <= 60) return "45+'";
+            // druga połowa
+            var half2 = elapsed - 15;
+            return half2 <= 90 ? $"{half2}'" : "90+'";
+        }
+    }
+
+    // ── Pomocnicze ───────────────────────────────────────────────
+    private bool CanSubmit => _predictedHome.HasValue && _predictedAway.HasValue;
+
+    private async Task HandleSubmit()
+    {
+        if (!CanSubmit) return;
+        await OnPredictionSubmit.InvokeAsync((Match.Id, _predictedHome!.Value, _predictedAway!.Value));
+        _saved = true;
+    }
+
+    private static string GoalSuffix(GoalScorerDto g) => (g.IsOwnGoal, g.IsPenalty) switch
+    {
+        (true,  _)    => " (sam.)",
+        (false, true) => " (k.)",
+        _             => string.Empty
+    };
+
+    private string StatusLabel => Match.Status switch
+    {
+        "Scheduled"  => "Zaplanowany",
+        "InProgress" => "Na żywo",
+        "Finished"   => "Zakończony",
+        "Cancelled"  => "Odwołany",
+        _            => Match.Status
+    };
+
+    private (string Label, string Icon) PredictionStatusInfo => Match.PredictionStatus switch
+    {
+        "Open"   => ("Otwarte",     "🟢"),
+        "Locked" => ("Zablokowane", "🔒"),
+        "Scored" => ("Rozliczone",  "✅"),
+        _        => (Match.PredictionStatus, "")
+    };
+
+    private string PredictionStatusLabel => PredictionStatusInfo.Label;
+    private string PredictionStatusIcon  => PredictionStatusInfo.Icon;
+
+    private string PredictionValueClass
+    {
+        get
+        {
+            if (Match.PredictionStatus != "Scored" || !Match.PointsAwarded.HasValue)
+                return string.Empty;
+            return Match.PointsAwarded.Value switch
+            {
+                >= 3 => "prediction-value--exact",
+                1    => "prediction-value--correct",
+                _    => "prediction-value--wrong"
+            };
+        }
+    }
+
+    private string PointsBadgeClass => Match.PointsAwarded switch
+    {
+        >= 3 => "exact",
+        >= 1 => "correct",
+        _    => "wrong"
+    };
+
+    private bool HasBreakdown =>
+        Match.BasePoints.HasValue ||
+        Match.TeamBonusPoints.HasValue ||
+        Match.PlayerGoalPoints.HasValue;
+}

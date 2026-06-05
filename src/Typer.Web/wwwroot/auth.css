@@ -1,0 +1,133 @@
+/* ── Wrapper strony ──────────────────────────────────────── */
+.auth-wrapper {
+    min-height: calc(100vh - 56px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+}
+
+/* ── Karta ───────────────────────────────────────────────── */
+.auth-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.10);
+    padding: 40px 40px 32px;
+    width: 100%;
+    max-width: 420px;
+}
+
+/* ── Nagłówek ────────────────────────────────────────────── */
+.auth-card__header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.auth-card__icon {
+    font-size: 2.4rem;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.auth-card__title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1a1f2e;
+    margin: 0 0 6px;
+}
+
+.auth-card__subtitle {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* ── Błąd ────────────────────────────────────────────────── */
+.auth-error {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #b91c1c;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.875rem;
+    margin-bottom: 20px;
+}
+
+/* ── Formularz ───────────────────────────────────────────── */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.form-input {
+    padding: 10px 14px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #1a1f2e;
+    background: #f9fafb;
+    transition: border-color .15s, box-shadow .15s;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+    background: #fff;
+}
+
+.form-input::placeholder { color: #9ca3af; }
+
+.form-hint {
+    font-size: 0.78rem;
+    color: #9ca3af;
+}
+
+/* ── Przycisk submit ─────────────────────────────────────── */
+.btn-auth {
+    margin-top: 4px;
+    padding: 12px;
+    background: #3b82f6;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+    letter-spacing: .3px;
+}
+
+.btn-auth:hover  { background: #2563eb; }
+.btn-auth:active { transform: scale(.98); }
+
+/* ── Stopka karty ────────────────────────────────────────── */
+.auth-card__footer {
+    text-align: center;
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 24px 0 0;
+}
+
+.auth-card__footer a {
+    color: #3b82f6;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-card__footer a:hover { text-decoration: underline; }

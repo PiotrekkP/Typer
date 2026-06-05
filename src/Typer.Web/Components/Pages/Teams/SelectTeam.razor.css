@@ -1,0 +1,170 @@
+/* ── Strona wyboru ───────────────────────────────────────── */
+.selection-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 16px 48px;
+}
+
+.selection-header { margin-bottom: 24px; }
+
+.selection-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1a1f2e;
+    margin: 0 0 6px;
+}
+
+.selection-subtitle { color: #6b7280; margin: 0; }
+
+/* ── Aktualny wybór ──────────────────────────────────────── */
+.current-selection {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+}
+
+.current-selection__label { color: #6b7280; }
+.current-selection__value { font-weight: 700; color: #1d4ed8; }
+.current-selection__player { color: #374151; }
+
+/* ── Feedback ────────────────────────────────────────────── */
+.selection-feedback {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    margin-bottom: 20px;
+}
+
+.selection-feedback--success {
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    color: #15803d;
+}
+
+.selection-feedback--error {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    color: #b91c1c;
+}
+
+/* ── Sekcja grupy ────────────────────────────────────────── */
+.group-section {
+    margin-bottom: 32px;
+}
+
+.group-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: #6b7280;
+    margin: 0 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+/* ── Grid drużyn ─────────────────────────────────────────── */
+.teams-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.team-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 12px;
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, transform .1s;
+    text-align: center;
+    position: relative;
+}
+
+.team-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59,130,246,.15);
+    transform: translateY(-2px);
+}
+
+.team-card--selected {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.team-card__flag {
+    width: 56px;
+    height: 38px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+}
+
+.team-card__flag-placeholder {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.team-card__info { display: flex; flex-direction: column; gap: 2px; }
+
+.team-card__name {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #111827;
+}
+
+.team-card__group {
+    font-size: 0.72rem;
+    color: #9ca3af;
+}
+
+.team-card__check {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    color: #3b82f6;
+    font-weight: 800;
+    font-size: 0.9rem;
+}
+
+/* ── Przycisk dalej ──────────────────────────────────────── */
+.selection-next { text-align: center; margin-top: 8px; }
+
+.btn-next {
+    display: inline-block;
+    padding: 12px 28px;
+    background: #3b82f6;
+    color: #fff;
+    font-weight: 700;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background .15s;
+}
+
+.btn-next:hover { background: #2563eb; }
+
+/* ── Prompt niezalogowanego ──────────────────────────────── */
+.selection-auth-prompt {
+    padding: 16px;
+    background: #fef9c3;
+    border: 1px solid #fde047;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #713f12;
+}
+
+.selection-auth-prompt a { color: #1d4ed8; font-weight: 700; }
+
+.loading { color: #9ca3af; font-style: italic; }

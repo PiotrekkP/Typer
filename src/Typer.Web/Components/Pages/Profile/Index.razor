@@ -1,0 +1,242 @@
+@page "/gracz/{UserId}"
+@rendermode InteractiveServer
+@using Typer.Application.UserProfile.DTOs
+
+@inject IUserProfileService UserProfileService
+@inject NavigationManager Nav
+
+<PageTitle>Profil gracza — Typer</PageTitle>
+
+@if (_loading)
+{
+    <div class="profile-loading">Ładowanie profilu…</div>
+}
+else if (_profile is null)
+{
+    <div class="profile-not-found">
+        <p>Nie znaleziono gracza.</p>
+        <a href="/ranking">Wróć do rankingu</a>
+    </div>
+}
+else
+{
+    <div class="profile-page">
+
+        <!-- ══ KARTA PROFILU ══════════════════════════════════════ -->
+        <div class="profile-card">
+            <div class="profile-avatar" style="background: @AvatarColor">
+                <span class="profile-avatar__initials">@Initials</span>
+            </div>
+
+            <div class="profile-info">
+                <h1 class="profile-name">@_profile.DisplayName</h1>
+
+                <div class="profile-rank">
+                    <span class="rank-badge rank-badge--@MedalClass(_profile.Position)">
+                        @RankIcon(_profile.Position)
+                        #@_profile.Position
+                    </span>
+                    <span class="profile-total-pts">@_profile.TotalPoints pkt łącznie</span>
+                </div>
+
+                <!-- Statystyki punktowe -->
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <span class="stat-icon">⚽</span>
+                        <span class="stat-value">@_profile.PredictionPoints</span>
+                        <span class="stat-label">typy</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">★</span>
+                        <span class="stat-value">@_profile.TeamBonusPoints</span>
+                        <span class="stat-label">bonus drużyna</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">👟</span>
+                        <span class="stat-value">@_profile.PlayerGoalPoints</span>
+                        <span class="stat-label">gole zawodnika</span>
+                    </div>
+                    @if (_profile.TournamentWinnerPoints > 0)
+                    {
+                        <div class="stat-item">
+                            <span class="stat-icon">🏆</span>
+                            <span class="stat-value">@_profile.TournamentWinnerPoints</span>
+                            <span class="stat-label">mistrz</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Reprezentacja i zawodnik -->
+            <div class="profile-selections">
+                @if (_profile.SelectedTeamId is not null)
+                {
+                    <div class="selection-item">
+                        @if (!string.IsNullOrEmpty(_profile.SelectedTeamFlagUrl))
+                        {
+                            <img src="@_profile.SelectedTeamFlagUrl"
+                                 alt="@_profile.SelectedTeamName"
+                                 class="selection-flag" />
+                        }
+                        <div class="selection-details">
+                            <span class="selection-label">Reprezentacja</span>
+                            <span class="selection-value">@_profile.SelectedTeamName</span>
+                        </div>
+                    </div>
+                }
+
+                @if (_profile.SelectedPlayerName is not null)
+                {
+                    <div class="selection-item">
+                        <div class="selection-jersey">
+                            @(_profile.SelectedPlayerNumber?.ToString() ?? "—")
+                        </div>
+                        <div class="selection-details">
+                            <span class="selection-label">Zawodnik</span>
+                            <span class="selection-value">@_profile.SelectedPlayerName</span>
+                        </div>
+                    </div>
+                }
+
+                @if (_profile.SelectedTeamId is null && _profile.SelectedPlayerName is null)
+                {
+                    <p class="selection-empty">Gracz nie wybrał jeszcze reprezentacji.</p>
+                }
+            </div>
+        </div>
+
+        <!-- ══ HISTORIA TYPÓW ═════════════════════════════════════ -->
+        <div class="profile-history">
+            <h2 class="history-title">Historia typów</h2>
+
+            @if (_profile.PredictionHistory.Count == 0)
+            {
+                <p class="history-empty">Brak rozliczonych typów.</p>
+            }
+            else
+            {
+                <div class="history-table-wrapper">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Mecz</th>
+                                <th>Wynik</th>
+                                <th>Typ</th>
+                                <th title="Suma punktów">Pkt</th>
+                                <th title="Punkty bazowe">⚽</th>
+                                <th title="Bonus drużyna">★</th>
+                                <th title="Gole zawodnika">👟</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var h in _profile.PredictionHistory)
+                            {
+                                <tr class="history-row history-row--@PtsClass(h.PointsAwarded)">
+                                    <td class="col-date">
+                                        @h.KickOffUtc.ToLocalTime().ToString("dd.MM")
+                                    </td>
+                                    <td class="col-match">
+                                        <span class="match-teams">
+                                            @if (!string.IsNullOrEmpty(h.HomeTeamFlagUrl))
+                                            {
+                                                <img src="@h.HomeTeamFlagUrl" alt="" class="hist-flag" />
+                                            }
+                                            <span class="team-name">@h.HomeTeamName</span>
+                                            <span class="vs">vs</span>
+                                            <span class="team-name">@h.AwayTeamName</span>
+                                            @if (!string.IsNullOrEmpty(h.AwayTeamFlagUrl))
+                                            {
+                                                <img src="@h.AwayTeamFlagUrl" alt="" class="hist-flag" />
+                                            }
+                                        </span>
+                                    </td>
+                                    <td class="col-score">
+                                        <strong>@h.HomeScore–@h.AwayScore</strong>
+                                    </td>
+                                    <td class="col-pred @PredClass(h)">
+                                        @h.PredictedHomeScore–@h.PredictedAwayScore
+                                    </td>
+                                    <td class="col-pts total">@(h.PointsAwarded ?? 0)</td>
+                                    <td class="col-pts sub">@(h.BasePoints ?? 0)</td>
+                                    <td class="col-pts sub">@(h.TeamBonusPoints ?? 0)</td>
+                                    <td class="col-pts sub">@(h.PlayerGoalPoints ?? 0)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="history-summary">
+                    <span>Rozliczone mecze: <strong>@_profile.PredictionHistory.Count</strong></span>
+                    <span>Trafionych wyników: <strong>@_profile.PredictionHistory.Count(h => h.BasePoints is > 0)</strong></span>
+                    <span>Dokładnych wyników: <strong>@_profile.PredictionHistory.Count(h => h.PointsAwarded >= 5)</strong></span>
+                </div>
+            }
+        </div>
+
+    </div>
+}
+
+@code {
+    [Parameter] public string UserId { get; set; } = default!;
+
+    private UserPublicProfileDto? _profile;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _profile = await UserProfileService.GetPublicProfileAsync(UserId);
+        _loading = false;
+    }
+
+    // ── Avatar ───────────────────────────────────────────────────
+    private string Initials => string.IsNullOrEmpty(_profile?.DisplayName)
+        ? "?"
+        : string.Concat(_profile.DisplayName
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2)
+            .Select(w => char.ToUpper(w[0])));
+
+    private string AvatarColor
+    {
+        get
+        {
+            if (_profile is null) return "#6b7280";
+            var hash = Math.Abs(_profile.UserId.GetHashCode());
+            string[] palette =
+            [
+                "#3b82f6","#8b5cf6","#ec4899","#f59e0b",
+                "#10b981","#06b6d4","#f97316","#6366f1",
+                "#84cc16","#e11d48","#0ea5e9","#a855f7"
+            ];
+            return palette[hash % palette.Length];
+        }
+    }
+
+    // ── Rankingi / CSS ───────────────────────────────────────────
+    private static string MedalClass(int pos) => pos switch
+    {
+        1 => "gold", 2 => "silver", 3 => "bronze", _ => "other"
+    };
+
+    private static string RankIcon(int pos) => pos switch
+    {
+        1 => "🥇", 2 => "🥈", 3 => "🥉", _ => string.Empty
+    };
+
+    private static string PtsClass(int? pts) => pts switch
+    {
+        >= 5 => "high", >= 1 => "mid", _ => "low"
+    };
+
+    private static string PredClass(UserPredictionHistoryDto h)
+    {
+        if (h.PointsAwarded is null) return string.Empty;
+        if (h.PredictedHomeScore == h.HomeScore && h.PredictedAwayScore == h.AwayScore)
+            return "pred--exact";
+        if (h.BasePoints is > 0)
+            return "pred--correct";
+        return "pred--wrong";
+    }
+}

@@ -1,0 +1,69 @@
+/* Dziedziczy layout i feedback z SelectTeam; tu tylko specyfika graczy */
+
+.players-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.player-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, transform .1s;
+    text-align: left;
+    position: relative;
+    width: 100%;
+}
+
+.player-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 3px 10px rgba(59,130,246,.12);
+    transform: translateY(-1px);
+}
+
+.player-card--selected {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.player-card__number {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #3b82f6;
+    min-width: 36px;
+    text-align: center;
+}
+
+.player-card__info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+
+.player-card__name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #111827;
+}
+
+.player-card__position {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+.player-card__club {
+    font-size: 0.72rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.player-card__check {
+    color: #3b82f6;
+    font-weight: 800;
+    font-size: 1rem;
+}

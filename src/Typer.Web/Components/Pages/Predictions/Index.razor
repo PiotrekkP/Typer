@@ -1,0 +1,91 @@
+@page "/typowanie"
+@rendermode InteractiveServer
+@using System.Security.Claims
+@inject IMatchService MatchService
+@inject IPredictionService PredictionService
+@inject AuthenticationStateProvider AuthStateProvider
+@using Typer.Application.Predictions.DTOs
+
+<PageTitle>Typowanie</PageTitle>
+
+<h1 class="page-title">Typowanie wyników</h1>
+
+@if (_rounds is null)
+{
+    <p class="loading">Ładowanie meczów…</p>
+}
+else if (_rounds.Count == 0)
+{
+    <p>Brak meczów do wyświetlenia.</p>
+}
+else
+{
+    @foreach (var round in _rounds)
+    {
+        <section class="round-section">
+            <h2 class="round-title">@round.Name</h2>
+
+            <div class="matches-list">
+                @foreach (var match in round.Matches)
+                {
+                    <MatchCard Match="match"
+                               IsAuthenticated="_isAuthenticated"
+                               OnPredictionSubmit="HandlePredictionSubmit" />
+                }
+            </div>
+        </section>
+    }
+}
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <p class="error">@_errorMessage</p>
+}
+
+@if (!_isAuthenticated)
+{
+    <p class="guest-info">
+        💡 <a href="/logowanie">Zaloguj się</a>, żeby typować wyniki i zbierać punkty.
+    </p>
+}
+
+@code {
+    private IReadOnlyList<RoundWithMatchesDto>? _rounds;
+    private string? _errorMessage;
+    private bool _isAuthenticated;
+    private string? _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        _userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        await LoadRoundsAsync();
+    }
+
+    private async Task LoadRoundsAsync()
+    {
+        _rounds = await MatchService.GetRoundsWithMatchesAsync(userId: _userId);
+    }
+
+    private async Task HandlePredictionSubmit((Guid MatchId, int Home, int Away) args)
+    {
+        if (_userId is null)
+        {
+            _errorMessage = "Musisz być zalogowany, żeby typować.";
+            return;
+        }
+
+        _errorMessage = null;
+
+        var result = await PredictionService.SubmitAsync(
+            _userId,
+            new SubmitPredictionRequest(args.MatchId, args.Home, args.Away));
+
+        if (!result.Succeeded)
+        {
+            _errorMessage = result.Error;
+        }
+    }
+}

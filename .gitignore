@@ -1,0 +1,59 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.userprefs
+
+## Publish / build artifacts
+[Pp]ublish/
+[Oo]ut/
+[Bb]uild/
+artifacts/
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+## Secrets & config overrides (keep appsettings.json, exclude local overrides)
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+secrets.json
+*.pfx
+*.p12
+
+## EF Core
+# migrations are intentionally tracked – no exclusion
+
+## Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+## Rider / JetBrains
+.idea/
+*.sln.iml
+
+## VSCode
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/*.code-snippets
+.history/
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Docker / Compose (docker-compose kept for dev convenience)
+.docker/
+
+## Logs
+*.log
+logs/

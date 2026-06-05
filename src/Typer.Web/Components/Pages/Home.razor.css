@@ -1,0 +1,251 @@
+/* ── Dashboard grid ──────────────────────────────────────── */
+.dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+}
+
+/* ── Widget (karta) ──────────────────────────────────────── */
+.dash-widget {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 320px;
+}
+
+.dash-widget__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #f3f4f6;
+    flex-shrink: 0;
+}
+
+.dash-widget__title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.dash-widget__link {
+    font-size: 0.8rem;
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.dash-widget__link:hover { text-decoration: underline; }
+
+.dash-widget__body {
+    padding: 16px 20px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── States ──────────────────────────────────────────────── */
+.dash-loading, .dash-empty {
+    color: #9ca3af;
+    font-size: 0.9rem;
+    text-align: center;
+    margin: auto;
+}
+
+.dash-empty a { color: #3b82f6; }
+
+.dash-guest-note {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    text-align: center;
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+.dash-guest-note a { color: #3b82f6; }
+
+/* ── Mini ranking ────────────────────────────────────────── */
+.mini-ranking {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.mini-ranking th {
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: #9ca3af;
+    padding: 0 8px 8px;
+}
+
+.mini-ranking td {
+    padding: 8px 8px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+
+.mini-ranking tr:last-child td { border-bottom: none; }
+
+.mini-ranking .pts-col { text-align: right; }
+.mini-ranking .pos-cell { text-align: center; font-size: 1rem; }
+
+.mini-ranking__me td {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+.mini-ranking__me td:first-child { border-radius: 6px 0 0 6px; }
+.mini-ranking__me td:last-child  { border-radius: 0 6px 6px 0; }
+
+.mini-ranking__separator td {
+    text-align: center;
+    color: #d1d5db;
+    font-size: 0.75rem;
+    padding: 2px;
+    border: none;
+}
+
+/* ── Result row (ostatnie mecze) ─────────────────────────── */
+.result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.85rem;
+}
+
+.result-row:last-child { border-bottom: none; }
+
+.result-row__teams {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+    min-width: 0;
+}
+
+.result-row__flag {
+    width: 18px;
+    height: 13px;
+    object-fit: cover;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.result-row__name {
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+}
+
+.result-row__score {
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: #111827;
+    white-space: nowrap;
+    padding: 0 4px;
+}
+
+.result-row__pts {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.result-row__pts--high { background: #dcfce7; color: #15803d; }
+.result-row__pts--mid  { background: #fef9c3; color: #854d0e; }
+.result-row__pts--low  { background: #fee2e2; color: #b91c1c; }
+
+.result-row__pred {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Profile card ────────────────────────────────────────── */
+.profile-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 0;
+}
+
+.profile-card__flag {
+    width: 80px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    flex-shrink: 0;
+}
+
+.profile-card__info { display: flex; flex-direction: column; gap: 4px; }
+
+.profile-card__team {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #111827;
+}
+
+.profile-card__player {
+    font-size: 0.875rem;
+    color: #374151;
+}
+
+.profile-card__player--empty a { color: #3b82f6; }
+
+.profile-card__points {
+    font-size: 0.82rem;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.profile-links {
+    display: flex;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+.profile-links a {
+    font-size: 0.8rem;
+    color: #3b82f6;
+    text-decoration: none;
+}
+
+.profile-links a:hover { text-decoration: underline; }
+
+/* ── Responsywność ───────────────────────────────────────── */
+@media (max-width: 768px) {
+    .dashboard {
+        grid-template-columns: 1fr;
+        padding: 16px 12px 40px;
+    }
+}

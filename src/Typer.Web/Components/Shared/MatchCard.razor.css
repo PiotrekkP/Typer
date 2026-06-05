@@ -1,0 +1,248 @@
+/* ── Karta ───────────────────────────────────────────────── */
+.match-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px 18px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+
+/* ── Kickoff ─────────────────────────────────────────────── */
+.match-kickoff {
+    font-size: 0.78rem;
+    color: #6b7280;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.kickoff-time { white-space: nowrap; }
+
+/* ── Żywa minuta + migająca kropka ──────────────────────── */
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 20px;
+    padding: 2px 9px;
+    font-weight: 700;
+    color: #15803d;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    flex-shrink: 0;
+    animation: live-dot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes live-dot-pulse {
+    0%, 100% { opacity: 1;   transform: scale(1);   }
+    50%      { opacity: 0.2; transform: scale(0.75); }
+}
+
+.live-minute { font-variant-numeric: tabular-nums; }
+
+/* ── Status meczu ────────────────────────────────────────── */
+.match-status {
+    font-size: 0.68rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: .3px;
+    white-space: nowrap;
+}
+
+.match-status--scheduled  { background: #eff6ff; color: #1d4ed8; }
+.match-status--inprogress { background: #fef3c7; color: #92400e; }
+.match-status--finished   { background: #dcfce7; color: #15803d; }
+.match-status--cancelled  { background: #fee2e2; color: #b91c1c; }
+
+/* ── Ciało karty ─────────────────────────────────────────── */
+.match-body {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.match-team          { flex: 1; display: flex; flex-direction: row; align-items: center; gap: 8px; }
+.match-team--home    { justify-content: flex-end; }
+.match-team--away    { justify-content: flex-start; }
+.match-team--home .match-team__name { text-align: right; order: 0; }
+.match-team--home .match-team__flag { order: 1; }
+.match-team__name    { font-weight: 700; font-size: 1rem; color: #111827; }
+.match-team__flag    { width: 28px; height: 20px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+
+.match-score         { min-width: 80px; text-align: center; }
+.match-score__actual { font-size: 1.5rem; font-weight: 800; color: #111827; }
+.match-score__vs     { font-size: 1rem; color: #9ca3af; font-weight: 600; }
+
+/* ── Strzelcy ────────────────────────────────────────────── */
+.match-scorers {
+    display: flex;
+    gap: 8px;
+    font-size: 0.74rem;
+    color: #374151;
+    margin-bottom: 10px;
+    border-top: 1px solid #f3f4f6;
+    padding-top: 8px;
+}
+
+.match-scorers__side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.match-scorers__side--home { align-items: flex-end; }
+.match-scorers__side--away { align-items: flex-start; }
+
+.goal-entry {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.match-scorers__side--home .goal-entry { flex-direction: row-reverse; }
+
+.goal-name   { font-weight: 500; color: #374151; }
+.goal-minute { color: #6b7280; font-size: 0.7rem; white-space: nowrap; }
+
+/* ── Panel typowania ─────────────────────────────────────── */
+.match-prediction {
+    border-top: 1px solid #f3f4f6;
+    padding-top: 10px;
+    font-size: 0.875rem;
+}
+
+.prediction-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.pred-status {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: .2px;
+}
+
+.pred-status--open   { background: #dcfce7; color: #15803d; }
+.pred-status--locked { background: #fef9c3; color: #854d0e; }
+.pred-status--scored { background: #eff6ff; color: #1d4ed8; }
+
+/* ── Podsumowanie punktów ────────────────────────────────── */
+.points-summary {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.points-total {
+    padding: 3px 11px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 0.82rem;
+}
+
+.points-badge--exact   { background: #dcfce7; color: #15803d; }
+.points-badge--correct { background: #dbeafe; color: #1d4ed8; }
+.points-badge--wrong   { background: #fee2e2; color: #b91c1c; }
+
+/* ── Rozbicie punktów na kategorie ──────────────────────── */
+.points-breakdown {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.pts-chip {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.pts-chip--base   { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.pts-chip--team   { background: #fefce8; color: #854d0e; border: 1px solid #fde68a; }
+.pts-chip--player { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.pts-chip--zero   { background: #f9fafb; color: #9ca3af; border: 1px solid #e5e7eb; font-style: italic; }
+
+.match-prediction__inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.prediction-hint    { color: #6b7280; font-size: 0.82rem; }
+
+.prediction-input {
+    width: 52px;
+    text-align: center;
+    padding: 5px 4px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+    background: #f9fafb;
+    transition: border-color .15s;
+    outline: none;
+}
+
+.prediction-input:focus { border-color: #3b82f6; background: #fff; }
+
+.prediction-separator { font-weight: 800; font-size: 1.1rem; color: #6b7280; }
+
+.btn-predict {
+    padding: 5px 16px;
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.btn-predict:hover    { background: #2563eb; }
+.btn-predict:disabled { opacity: 0.45; cursor: default; }
+
+.prediction-saved { color: #15803d; font-weight: 700; font-size: 0.85rem; }
+
+.match-prediction__result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.prediction-value          { font-weight: 700; font-size: 1rem; }
+.prediction-value--exact   { color: #15803d; }
+.prediction-value--correct { color: #1d4ed8; }
+.prediction-value--wrong   { color: #b91c1c; }
+
+.prediction-empty { color: #9ca3af; font-style: italic; font-size: 0.85rem; }

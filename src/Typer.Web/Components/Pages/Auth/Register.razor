@@ -1,0 +1,71 @@
+@page "/rejestracja"
+@inject NavigationManager Nav
+
+<PageTitle>Rejestracja — Typer</PageTitle>
+
+<div class="auth-wrapper">
+    <div class="auth-card">
+
+        <div class="auth-card__header">
+            <span class="auth-card__icon">⚽</span>
+            <h1 class="auth-card__title">Rejestracja</h1>
+            <p class="auth-card__subtitle">Dołącz do ligi typowania i rywalizuj z innymi.</p>
+        </div>
+
+        @if (ErrorMessage is not null)
+        {
+            <div class="auth-error">@ErrorMessage</div>
+        }
+
+        <form method="post" action="/account/register" class="auth-form">
+
+            <div class="form-group">
+                <label for="displayName">Nazwa gracza</label>
+                <input id="displayName" name="displayName" type="text"
+                       class="form-input" placeholder="np. KingTyper99"
+                       required minlength="3" maxlength="50"
+                       autocomplete="nickname" />
+            </div>
+
+            <div class="form-group">
+                <label for="email">Adres e-mail</label>
+                <input id="email" name="email" type="email"
+                       class="form-input" placeholder="jan@example.com"
+                       required autocomplete="email" />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Hasło</label>
+                <input id="password" name="password" type="password"
+                       class="form-input" placeholder="Minimum 8 znaków"
+                       required minlength="8" autocomplete="new-password" />
+                <span class="form-hint">Min. 8 znaków, przynajmniej jedna duża litera i cyfra.</span>
+            </div>
+
+            <button type="submit" class="btn-auth">Utwórz konto</button>
+
+        </form>
+
+        <p class="auth-card__footer">
+            Masz już konto?
+            <a href="/logowanie">Zaloguj się</a>
+        </p>
+
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "error")]
+    private string? Error { get; set; }
+
+    private string? ErrorMessage => Error switch
+    {
+        "DuplicateEmail"    => "Użytkownik z tym adresem e-mail już istnieje.",
+        "DuplicateUserName" => "Użytkownik z tym adresem e-mail już istnieje.",
+        "PasswordTooShort"  => "Hasło jest za krótkie (minimum 8 znaków).",
+        "PasswordRequiresUpper" => "Hasło musi zawierać przynajmniej jedną wielką literę.",
+        "PasswordRequiresDigit" => "Hasło musi zawierać przynajmniej jedną cyfrę.",
+        not null            => "Rejestracja nie powiodła się. Sprawdź dane i spróbuj ponownie.",
+        _                   => null
+    };
+}

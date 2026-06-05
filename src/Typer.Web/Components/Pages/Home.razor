@@ -1,0 +1,283 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using Typer.Application.Matches.DTOs
+@using Typer.Application.Rankings.DTOs
+@using Typer.Application.UserProfile.DTOs
+@inject IMatchService MatchService
+@inject IRankingService RankingService
+@inject IUserProfileService UserProfileService
+@inject IPredictionService PredictionService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Typer — Liga typowania</PageTitle>
+
+<div class="dashboard">
+
+    <!-- ══ LEWY GÓRNY: Nadchodzące mecze ══════════════════════════ -->
+    <div class="dash-widget dash-widget--upcoming">
+        <div class="dash-widget__header">
+            <h2 class="dash-widget__title">⚽ Najbliższe mecze</h2>
+            <a href="/typowanie" class="dash-widget__link">Wszystkie →</a>
+        </div>
+        <div class="dash-widget__body">
+            @if (_upcoming is null)
+            {
+                <p class="dash-loading">Ładowanie…</p>
+            }
+            else if (_upcoming.Count == 0)
+            {
+                <p class="dash-empty">Brak nadchodzących meczów.</p>
+            }
+            else
+            {
+                @foreach (var match in _upcoming)
+                {
+                    <MatchCard Match="match"
+                               IsAuthenticated="_isAuthenticated"
+                               OnPredictionSubmit="HandlePredictionSubmit" />
+                }
+            }
+        </div>
+    </div>
+
+    <!-- ══ PRAWY GÓRNY: Mini-ranking ══════════════════════════════ -->
+    <div class="dash-widget dash-widget--ranking">
+        <div class="dash-widget__header">
+            <h2 class="dash-widget__title">🏆 Ranking</h2>
+            <a href="/ranking" class="dash-widget__link">Pełny ranking →</a>
+        </div>
+        <div class="dash-widget__body">
+            @if (_ranking is null)
+            {
+                <p class="dash-loading">Ładowanie…</p>
+            }
+            else if (_ranking.Count == 0)
+            {
+                <p class="dash-empty">Ranking jest pusty.</p>
+            }
+            else
+            {
+                <table class="mini-ranking">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Gracz</th>
+                            <th>Repr.</th>
+                            <th class="pts-col">Pkt</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in _ranking.Take(5))
+                        {
+                            <tr class="@(entry.UserId == _userId ? "mini-ranking__me" : "")">
+                                <td class="pos-cell">@MedalOrPos(entry.Position)</td>
+                                <td>@entry.DisplayName</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(entry.TeamFlagUrl))
+                                    {
+                                        <img src="@entry.TeamFlagUrl" alt="@entry.TeamName"
+                                             style="width:18px;height:13px;object-fit:cover;border-radius:2px;vertical-align:middle;" />
+                                    }
+                                </td>
+                                <td class="pts-col"><strong>@entry.TotalPoints</strong></td>
+                            </tr>
+                        }
+                        @if (_userEntry is not null && _userEntry.Position > 5)
+                        {
+                            <tr class="mini-ranking__separator"><td colspan="4">…</td></tr>
+                            <tr class="mini-ranking__me">
+                                <td class="pos-cell">@_userEntry.Position</td>
+                                <td>@_userEntry.DisplayName</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(_userEntry.TeamFlagUrl))
+                                    {
+                                        <img src="@_userEntry.TeamFlagUrl" alt="@_userEntry.TeamName"
+                                             style="width:18px;height:13px;object-fit:cover;border-radius:2px;vertical-align:middle;" />
+                                    }
+                                </td>
+                                <td class="pts-col"><strong>@_userEntry.TotalPoints</strong></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (!_isAuthenticated)
+                {
+                    <p class="dash-guest-note">
+                        <a href="/logowanie">Zaloguj się</a>, żeby zobaczyć swoją pozycję.
+                    </p>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- ══ LEWY DOLNY: Ostatnie wyniki ═══════════════════════════ -->
+    <div class="dash-widget dash-widget--recent">
+        <div class="dash-widget__header">
+            <h2 class="dash-widget__title">📋 Ostatnie wyniki</h2>
+        </div>
+        <div class="dash-widget__body">
+            @if (_recent is null)
+            {
+                <p class="dash-loading">Ładowanie…</p>
+            }
+            else if (_recent.Count == 0)
+            {
+                <p class="dash-empty">Brak zakończonych meczów.</p>
+            }
+            else
+            {
+                @foreach (var m in _recent)
+                {
+                    <div class="result-row">
+                        <div class="result-row__teams">
+                            @if (!string.IsNullOrEmpty(m.HomeTeamFlagUrl))
+                            {
+                                <img src="@m.HomeTeamFlagUrl" alt="" class="result-row__flag" />
+                            }
+                            <span class="result-row__name">@m.HomeTeamName</span>
+                            <span class="result-row__score">@m.HomeScore – @m.AwayScore</span>
+                            <span class="result-row__name">@m.AwayTeamName</span>
+                            @if (!string.IsNullOrEmpty(m.AwayTeamFlagUrl))
+                            {
+                                <img src="@m.AwayTeamFlagUrl" alt="" class="result-row__flag" />
+                            }
+                        </div>
+                        @if (_isAuthenticated && m.PointsAwarded.HasValue)
+                        {
+                            <span class="result-row__pts result-row__pts--@PtsClass(m.PointsAwarded.Value)">
+                                +@m.PointsAwarded pkt
+                            </span>
+                        }
+                        else if (_isAuthenticated && m.PredictedHomeScore.HasValue)
+                        {
+                            <span class="result-row__pred">
+                                Typ: @m.PredictedHomeScore–@m.PredictedAwayScore
+                            </span>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- ══ PRAWY DOLNY: Moja drużyna ══════════════════════════════ -->
+    <div class="dash-widget dash-widget--profile">
+        <div class="dash-widget__header">
+            <h2 class="dash-widget__title">🌍 Moja drużyna</h2>
+        </div>
+        <div class="dash-widget__body">
+            @if (!_isAuthenticated)
+            {
+                <p class="dash-empty">
+                    <a href="/logowanie">Zaloguj się</a>, żeby wybrać reprezentację i zawodnika.
+                </p>
+            }
+            else if (_selection is null)
+            {
+                <p class="dash-loading">Ładowanie…</p>
+            }
+            else if (_selection.SelectedTeamId is null)
+            {
+                <p class="dash-empty">
+                    Nie wybrałeś jeszcze reprezentacji.<br />
+                    <a href="/reprezentacje">Wybierz teraz →</a>
+                </p>
+            }
+            else
+            {
+                <div class="profile-card">
+                    @if (!string.IsNullOrEmpty(_selection.SelectedTeamFlagUrl))
+                    {
+                        <img src="@_selection.SelectedTeamFlagUrl"
+                             alt="@_selection.SelectedTeamName"
+                             class="profile-card__flag" />
+                    }
+                    <div class="profile-card__info">
+                        <div class="profile-card__team">@_selection.SelectedTeamName</div>
+                        @if (_selection.SelectedPlayerId is not null)
+                        {
+                            <div class="profile-card__player">
+                                👟 #@_selection.SelectedPlayerNumber @_selection.SelectedPlayerName
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="profile-card__player profile-card__player--empty">
+                                <a href="/zawodnicy">Wybierz zawodnika →</a>
+                            </div>
+                        }
+                        <div class="profile-card__points">
+                            Łączne punkty: <strong>@_selection.TotalPoints</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="profile-links">
+                    <a href="/reprezentacje">Zmień reprezentację</a>
+                    <a href="/zawodnicy">Zmień zawodnika</a>
+                </div>
+            }
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private IReadOnlyList<MatchDetailDto>? _upcoming;
+    private IReadOnlyList<MatchDetailDto>? _recent;
+    private IReadOnlyList<RankingEntryDto>? _ranking;
+    private RankingEntryDto? _userEntry;
+    private UserSelectionDto? _selection;
+
+    private bool _isAuthenticated;
+    private string? _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = auth.User.Identity?.IsAuthenticated ?? false;
+        _userId = auth.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        await LoadUpcomingAsync();
+        await LoadRecentAsync();
+        await LoadRankingAsync();
+        await LoadSelectionAsync();
+    }
+
+    private async Task LoadUpcomingAsync()
+        => _upcoming = await MatchService.GetUpcomingMatchesAsync(5, _userId);
+
+    private async Task LoadRecentAsync()
+        => _recent = await MatchService.GetRecentFinishedMatchesAsync(5, _userId);
+
+    private async Task LoadRankingAsync()
+    {
+        _ranking = await RankingService.GetLeaderboardAsync();
+        if (_userId is not null)
+            _userEntry = _ranking.FirstOrDefault(e => e.UserId == _userId);
+    }
+
+    private async Task LoadSelectionAsync()
+    {
+        if (_userId is not null)
+            _selection = await UserProfileService.GetSelectionAsync(_userId);
+        else
+            _selection = new UserSelectionDto(null, null, null, null, null, null, null, 0);
+    }
+
+    private async Task HandlePredictionSubmit((Guid MatchId, int Home, int Away) args)
+    {
+        if (_userId is null) return;
+        await PredictionService.SubmitAsync(_userId, new SubmitPredictionRequest(args.MatchId, args.Home, args.Away), CancellationToken.None);
+        _upcoming = await MatchService.GetUpcomingMatchesAsync(5, _userId);
+    }
+
+    private static string MedalOrPos(int pos) => pos switch
+    {
+        1 => "🥇", 2 => "🥈", 3 => "🥉", _ => pos.ToString()
+    };
+
+    private static string PtsClass(int pts) => pts switch
+    {
+        >= 5 => "high", >= 2 => "mid", _ => "low"
+    };
+}

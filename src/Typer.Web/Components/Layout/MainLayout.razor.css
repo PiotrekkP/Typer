@@ -1,0 +1,89 @@
+/* ── Header ──────────────────────────────────────────────── */
+.site-header {
+    background: #0f1117;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.site-header__inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 28px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+/* ── Logo ─────────────────────────────────────────────────── */
+.site-logo {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    text-decoration: none;
+    flex-shrink: 0;
+    margin-right: 40px;
+}
+
+.site-logo__icon { font-size: 1.25rem; }
+
+.site-logo__text {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: .3px;
+}
+
+/* ── Nav ─────────────────────────────────────────────────── */
+/* Wszystkie .site-nav__link style są w app.css (globalne)   */
+.site-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+
+/* ── Auth blok ────────────────────────────────────────────── */
+.site-header__auth {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.site-header__username {
+    font-size: 0.82rem;
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+/* ── Main content ─────────────────────────────────────────── */
+.site-main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+}
+
+/* ── Blazor error bar ─────────────────────────────────────── */
+#blazor-error-ui {
+    background: #fef3cd;
+    border-top: 1px solid #ffc107;
+    bottom: 0;
+    display: none;
+    left: 0;
+    padding: 10px 20px;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    font-size: .9rem;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 16px;
+    top: 10px;
+}
