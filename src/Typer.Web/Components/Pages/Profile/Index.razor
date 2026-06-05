@@ -12,6 +12,8 @@
 @inject IPlayerService PlayerService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject IUserSelectionEvents SelectionEvents
 
 <PageTitle>@PageTitleText — Typer</PageTitle>
 
@@ -93,7 +95,7 @@ else
             </div>
 
             <div class="profile-selections">
-                <div class="selection-row">
+                <div class="selection-row @(_profile.SelectedTeamId is not null ? "selection-row--filled" : "")">
                     <div class="selection-item">
                         @if (_profile.SelectedTeamId is not null && !string.IsNullOrEmpty(_profile.SelectedTeamFlagUrl))
                         {
@@ -126,7 +128,7 @@ else
                     }
                 </div>
 
-                <div class="selection-row">
+                <div class="selection-row @(_profile.SelectedPlayerId is not null ? "selection-row--filled" : "")">
                     <div class="selection-item">
                         @if (_profile.SelectedPlayerName is not null)
                         {
@@ -259,7 +261,14 @@ else
                                 <button type="button"
                                         class="player-picker-card @(isSelected ? "player-picker-card--selected" : "")"
                                         @onclick="() => SelectPlayerAsync(player)">
-                                    <span class="player-picker-card__number">#@player.JerseyNumber</span>
+                                    @if (!string.IsNullOrEmpty(player.PhotoUrl))
+                                    {
+                                        <img src="@player.PhotoUrl" alt="" class="player-picker-card__photo" referrerpolicy="no-referrer" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <span class="player-picker-card__number">#@player.JerseyNumber</span>
+                                    }
                                     <div class="player-picker-card__info">
                                         <span class="player-picker-card__name">@player.FirstName @player.LastName</span>
                                         @if (!string.IsNullOrEmpty(player.TeamName))
@@ -357,6 +366,9 @@ else
 @code {
     [Parameter] public string? UserId { get; set; }
 
+    [SupplyParameterFromQuery(Name = "edit")]
+    public string? Edit { get; set; }
+
     private UserPublicProfileDto? _profile;
     private bool _loading = true;
     private bool _isOwnProfile;
@@ -373,28 +385,47 @@ else
     private bool _playersLoading;
     private CancellationTokenSource? _searchDebounceCts;
     private readonly SemaphoreSlim _playerLoadGate = new(1, 1);
+    private string? _appliedEditQuery;
+    private string? _resolvedUserId;
 
     private string PageTitleText => _isOwnProfile ? "Profil" : "Profil gracza";
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    }
 
+    protected override async Task OnParametersSetAsync()
+    {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        _effectiveUserId = UserId;
-        if (string.IsNullOrEmpty(_effectiveUserId))
+        var targetUserId = UserId;
+        if (string.IsNullOrEmpty(targetUserId))
         {
             if (_currentUserId is null)
             {
                 Nav.NavigateTo("/logowanie", true);
                 return;
             }
-            _effectiveUserId = _currentUserId;
+            targetUserId = _currentUserId;
         }
 
+        if (targetUserId == _resolvedUserId && _profile is not null)
+            return;
+
+        _resolvedUserId = targetUserId;
+        _effectiveUserId = targetUserId;
         _isOwnProfile = _currentUserId == _effectiveUserId;
+
+        if (!_isOwnProfile)
+        {
+            _playerSearch = "";
+            _selectionMessage = null;
+            _selectionError = false;
+        }
+
+        _loading = true;
         await ReloadProfileAsync();
         await EnsureOwnProfileDataAsync();
         _loading = false;
@@ -402,12 +433,11 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || !_isOwnProfile || _ownProfileDataLoaded)
-            return;
-
-        await EnsureOwnProfileDataAsync();
-        if (_ownProfileDataLoaded)
-            await InvokeAsync(StateHasChanged);
+        if (_isOwnProfile && !_loading && Edit is "team" or "player" && Edit != _appliedEditQuery)
+        {
+            _appliedEditQuery = Edit;
+            await JS.InvokeVoidAsync("typerOpenProfileEdit", Edit);
+        }
     }
 
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
@@ -416,14 +446,14 @@ else
         {
             var authState = await task;
             _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var wasOwnProfile = _isOwnProfile;
-            _isOwnProfile = _currentUserId == _effectiveUserId;
 
-            if (_isOwnProfile && !wasOwnProfile)
+            // Po zalogowaniu/wylogowaniu przelicz profil (np. /profil bez wcześniejszej sesji).
+            _resolvedUserId = null;
+            await InvokeAsync(async () =>
             {
-                await EnsureOwnProfileDataAsync();
-                await InvokeAsync(StateHasChanged);
-            }
+                await OnParametersSetAsync();
+                StateHasChanged();
+            });
         }
         catch
         {
@@ -547,6 +577,7 @@ else
             _selectionMessage = $"Wybrano: {team.Name}";
             _selectionError = false;
             await ReloadProfileAsync();
+            SelectionEvents.NotifySelectionChanged();
         }
         else
         {
@@ -565,6 +596,7 @@ else
             _selectionMessage = $"Wybrano: {player.FirstName} {player.LastName}";
             _selectionError = false;
             await ReloadProfileAsync();
+            SelectionEvents.NotifySelectionChanged();
         }
         else
         {

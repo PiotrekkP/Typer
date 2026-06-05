@@ -66,7 +66,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var entry in _ranking.Take(5))
+                        @foreach (var entry in _ranking.Take(10))
                         {
                             <tr class="@(entry.UserId == _userId ? "mini-ranking__me" : "")">
                                 <td class="pos-cell">@MedalOrPos(entry.Position)</td>
@@ -81,7 +81,7 @@
                                 <td class="pts-col"><strong>@entry.TotalPoints</strong></td>
                             </tr>
                         }
-                        @if (_userEntry is not null && _userEntry.Position > 5)
+                        @if (_userEntry is not null && _userEntry.Position > 10)
                         {
                             <tr class="mini-ranking__separator"><td colspan="4">…</td></tr>
                             <tr class="mini-ranking__me">
@@ -143,6 +143,27 @@
                                 <img src="@m.AwayTeamFlagUrl" alt="" class="recent-result__flag" />
                             }
                         </div>
+                        @if (m.GoalScorers.Any())
+                        {
+                            <div class="recent-result__goals recent-result__goals--home">
+                                @foreach (var g in m.GoalScorers.Where(x => x.IsHomeTeam).OrderBy(x => x.Minute))
+                                {
+                                    <span class="goal-entry">
+                                        <span class="goal-name">@g.PlayerName@GoalSuffix(g)</span>
+                                        <span class="goal-minute">⚽ @g.Minute'</span>
+                                    </span>
+                                }
+                            </div>
+                            <div class="recent-result__goals recent-result__goals--away">
+                                @foreach (var g in m.GoalScorers.Where(x => !x.IsHomeTeam).OrderBy(x => x.Minute))
+                                {
+                                    <span class="goal-entry">
+                                        <span class="goal-minute">@g.Minute' ⚽</span>
+                                        <span class="goal-name">@g.PlayerName@GoalSuffix(g)</span>
+                                    </span>
+                                }
+                            </div>
+                        }
                         @if (_isAuthenticated && m.PointsAwarded.HasValue)
                         {
                             <span class="recent-result__pts recent-result__pts--@PtsClass(m.PointsAwarded.Value)">
@@ -186,30 +207,55 @@
             }
             else
             {
-                <div class="profile-card">
-                    @if (!string.IsNullOrEmpty(_selection.SelectedTeamFlagUrl))
-                    {
-                        <img src="@_selection.SelectedTeamFlagUrl"
-                             alt="@_selection.SelectedTeamName"
-                             class="profile-card__flag" />
-                    }
-                    <div class="profile-card__info">
-                        <div class="profile-card__team">@_selection.SelectedTeamName</div>
+                <div class="profile-split">
+                    <div class="profile-split__half profile-split__half--team">
+                        @if (!string.IsNullOrEmpty(_selection.SelectedTeamFlagUrl))
+                        {
+                            <img src="@_selection.SelectedTeamFlagUrl"
+                                 alt="@_selection.SelectedTeamName"
+                                 class="profile-split__flag" />
+                        }
+                        <div class="profile-split__label">Reprezentacja</div>
+                        <div class="profile-split__name">@_selection.SelectedTeamName</div>
+                        <div class="profile-split__pts">
+                            <span class="profile-split__pts-value">@_selection.TeamBonusPoints</span>
+                            <span class="profile-split__pts-label">pkt za mecze</span>
+                        </div>
+                    </div>
+                    <div class="profile-split__divider"></div>
+                    <div class="profile-split__half profile-split__half--player">
                         @if (_selection.SelectedPlayerId is not null)
                         {
-                            <div class="profile-card__player">
-                                👟 #@_selection.SelectedPlayerNumber @_selection.SelectedPlayerName
+                            @if (!string.IsNullOrEmpty(_selection.SelectedPlayerPhotoUrl) && !_playerPhotoFailed)
+                            {
+                                <img src="@_selection.SelectedPlayerPhotoUrl"
+                                     alt="@_selection.SelectedPlayerName"
+                                     class="profile-split__photo"
+                                     referrerpolicy="no-referrer"
+                                     loading="lazy"
+                                     @onerror="OnPlayerPhotoError" />
+                            }
+                            else
+                            {
+                                <div class="profile-split__photo profile-split__photo--placeholder">
+                                    #@(_selection.SelectedPlayerNumber?.ToString() ?? "—")
+                                </div>
+                            }
+                            <div class="profile-split__label">Zawodnik</div>
+                            <div class="profile-split__name">@_selection.SelectedPlayerName</div>
+                            <div class="profile-split__pts">
+                                <span class="profile-split__pts-value">@_selection.PlayerGoalPoints</span>
+                                <span class="profile-split__pts-label">pkt za bramki</span>
                             </div>
                         }
                         else
                         {
-                            <div class="profile-card__player profile-card__player--empty">
+                            <div class="profile-split__photo profile-split__photo--placeholder">—</div>
+                            <div class="profile-split__label">Zawodnik</div>
+                            <div class="profile-split__name profile-split__name--empty">
                                 <a href="/profil">Wybierz zawodnika →</a>
                             </div>
                         }
-                        <div class="profile-card__points">
-                            Łączne punkty: <strong>@_selection.TotalPoints</strong>
-                        </div>
                     </div>
                 </div>
                 <div class="profile-links">
@@ -230,6 +276,7 @@
 
     private bool _isAuthenticated;
     private string? _userId;
+    private bool _playerPhotoFailed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -244,10 +291,10 @@
     }
 
     private async Task LoadUpcomingAsync()
-        => _upcoming = await MatchService.GetUpcomingMatchesAsync(5, _userId);
+        => _upcoming = await MatchService.GetUpcomingMatchesAsync(2, _userId);
 
     private async Task LoadRecentAsync()
-        => _recent = await MatchService.GetRecentFinishedMatchesAsync(5, _userId);
+        => _recent = await MatchService.GetRecentFinishedMatchesAsync(3, _userId);
 
     private async Task LoadRankingAsync()
     {
@@ -258,17 +305,24 @@
 
     private async Task LoadSelectionAsync()
     {
+        _playerPhotoFailed = false;
         if (_userId is not null)
             _selection = await UserProfileService.GetSelectionAsync(_userId);
         else
-            _selection = new UserSelectionDto(null, null, null, null, null, null, null, 0);
+            _selection = new UserSelectionDto(null, null, null, null, null, null, null, null, 0, 0, 0);
+    }
+
+    private void OnPlayerPhotoError()
+    {
+        _playerPhotoFailed = true;
+        StateHasChanged();
     }
 
     private async Task HandlePredictionSubmit((Guid MatchId, int Home, int Away) args)
     {
         if (_userId is null) return;
         await PredictionService.SubmitAsync(_userId, new SubmitPredictionRequest(args.MatchId, args.Home, args.Away), CancellationToken.None);
-        _upcoming = await MatchService.GetUpcomingMatchesAsync(5, _userId);
+        _upcoming = await MatchService.GetUpcomingMatchesAsync(2, _userId);
     }
 
     private static string MedalOrPos(int pos) => pos switch
@@ -279,5 +333,12 @@
     private static string PtsClass(int pts) => pts switch
     {
         >= 5 => "high", >= 2 => "mid", _ => "low"
+    };
+
+    private static string GoalSuffix(GoalScorerDto g) => (g.IsOwnGoal, g.IsPenalty) switch
+    {
+        (true, _) => " (sam.)",
+        (_, true) => " (k.)",
+        _ => ""
     };
 }

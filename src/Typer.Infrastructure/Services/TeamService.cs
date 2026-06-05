@@ -8,16 +8,18 @@ namespace Typer.Infrastructure.Services;
 
 public class TeamService : ITeamService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-    public TeamService(ApplicationDbContext context)
+    public TeamService(IDbContextFactory<ApplicationDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<IReadOnlyList<TeamDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Teams
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await context.Teams
             .OrderBy(t => t.GroupName)
             .ThenBy(t => t.Name)
             .Select(t => new TeamDto(t.Id, t.Name, t.Code, t.FlagUrl, t.GroupName))
@@ -26,22 +28,20 @@ public class TeamService : ITeamService
 
     public async Task<Result> SelectTeamAsync(string userId, SelectTeamRequest request, CancellationToken cancellationToken = default)
     {
-        var teamExists = await _context.Teams.AnyAsync(t => t.Id == request.TeamId, cancellationToken);
-        if (!teamExists)
-        {
-            return Result.Failure("Wybrana reprezentacja nie istnieje.");
-        }
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
-        var profile = await _context.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+        var teamExists = await context.Teams.AnyAsync(t => t.Id == request.TeamId, cancellationToken);
+        if (!teamExists)
+            return Result.Failure("Wybrana reprezentacja nie istnieje.");
+
+        var profile = await context.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
         if (profile is null)
-        {
             return Result.Failure("Profil użytkownika nie został znaleziony.");
-        }
 
         profile.SelectedTeamId = request.TeamId;
         profile.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 }

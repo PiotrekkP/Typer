@@ -176,6 +176,37 @@ h1:focus { outline: none; }
     border-color: #2563eb !important;
 }
 
+/* ── Przypomnienie o wyborze reprezentacji / zawodnika ─────── */
+.selection-reminder {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 14px 20px 0;
+}
+
+.selection-reminder__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 13px 20px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #b91c1c 0%, #991b1b 100%);
+    border: 1px solid #7f1d1d;
+    color: #fff !important;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none !important;
+    text-align: center;
+    box-shadow: 0 3px 10px rgba(127, 29, 29, .25);
+    transition: background .15s, box-shadow .15s, transform .1s;
+}
+
+.selection-reminder__btn:hover {
+    background: linear-gradient(180deg, #991b1b 0%, #7f1d1d 100%);
+    box-shadow: 0 4px 14px rgba(127, 29, 29, .35);
+    transform: translateY(-1px);
+}
+
 .site-main {
     max-width: 1100px;
     margin: 0 auto;

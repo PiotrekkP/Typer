@@ -8,6 +8,7 @@ using Typer.Infrastructure.Persistence;
 using Typer.Application.Matches.Interfaces;
 using Typer.Application.Scoring.Interfaces;
 using Typer.Web.Components;
+using Typer.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMatchStatusBackgroundService();
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<IUserSelectionEvents, UserSelectionEvents>();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

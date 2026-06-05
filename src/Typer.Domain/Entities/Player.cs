@@ -13,6 +13,8 @@ public class Player : BaseEntity
 
     public bool IsMvp { get; set; }
 
+    public string? PhotoUrl { get; set; }
+
     public Guid TeamId { get; set; }
     public Team Team { get; set; } = null!;
 }

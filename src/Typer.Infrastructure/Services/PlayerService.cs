@@ -11,16 +11,18 @@ namespace Typer.Infrastructure.Services;
 
 public class PlayerService : IPlayerService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-    public PlayerService(ApplicationDbContext context)
+    public PlayerService(IDbContextFactory<ApplicationDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<IReadOnlyList<PlayerDto>> GetByTeamAsync(Guid teamId, CancellationToken cancellationToken = default)
     {
-        var players = await PlayersQuery()
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var players = await PlayersQuery(context)
             .Where(p => p.TeamId == teamId)
             .OrderBy(p => p.JerseyNumber)
             .ToListAsync(cancellationToken);
@@ -30,7 +32,9 @@ public class PlayerService : IPlayerService
 
     public async Task<IReadOnlyList<PlayerDto>> GetMvpsAsync(CancellationToken cancellationToken = default)
     {
-        var players = await PlayersQuery()
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var players = await PlayersQuery(context)
             .Where(p => p.IsMvp)
             .OrderBy(p => p.LastName)
             .ThenBy(p => p.FirstName)
@@ -45,9 +49,11 @@ public class PlayerService : IPlayerService
         if (term.Length < 2)
             return [];
 
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
         var pattern = $"%{term}%";
 
-        var results = await PlayersQuery()
+        var results = await PlayersQuery(context)
             .Where(p =>
                 EF.Functions.ILike(p.FirstName, pattern) ||
                 EF.Functions.ILike(p.LastName, pattern) ||
@@ -62,11 +68,10 @@ public class PlayerService : IPlayerService
         if (results.Count > 0)
             return results.Select(Map).ToList();
 
-        // Bounded fallback when diacritics differ between query and stored names.
         var prefix = term.Length > 3 ? term[..3] : term;
         var prefixPattern = $"%{prefix}%";
 
-        var candidates = await PlayersQuery()
+        var candidates = await PlayersQuery(context)
             .Where(p =>
                 EF.Functions.ILike(p.LastName, prefixPattern) ||
                 EF.Functions.ILike(p.FirstName, prefixPattern))
@@ -106,25 +111,27 @@ public class PlayerService : IPlayerService
 
     public async Task<Result> SelectPlayerAsync(string userId, SelectPlayerRequest request, CancellationToken cancellationToken = default)
     {
-        var playerExists = await _context.Players
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var playerExists = await context.Players
             .AnyAsync(p => p.Id == request.PlayerId, cancellationToken);
 
         if (!playerExists)
             return Result.Failure("Wybrany zawodnik nie istnieje.");
 
-        var profile = await _context.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+        var profile = await context.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
         if (profile is null)
             return Result.Failure("Profil użytkownika nie został znaleziony.");
 
         profile.SelectedPlayerId = request.PlayerId;
         profile.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 
-    private IQueryable<Player> PlayersQuery()
-        => _context.Players
+    private static IQueryable<Player> PlayersQuery(ApplicationDbContext context)
+        => context.Players
             .AsNoTracking()
             .Include(p => p.Team);
 
@@ -138,6 +145,7 @@ public class PlayerService : IPlayerService
             p.Position,
             p.Club,
             p.IsMvp,
+            p.PhotoUrl,
             p.Team?.Name,
             p.Team?.FlagUrl);
 }

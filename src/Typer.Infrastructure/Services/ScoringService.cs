@@ -9,16 +9,18 @@ namespace Typer.Infrastructure.Services;
 
 public class ScoringService : IScoringService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-    public ScoringService(ApplicationDbContext context)
+    public ScoringService(IDbContextFactory<ApplicationDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<Result> ScoreMatchAsync(Guid matchId, CancellationToken cancellationToken = default)
     {
-        var match = await _context.Matches
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var match = await context.Matches
             .AsNoTracking()
             .FirstOrDefaultAsync(m => m.Id == matchId, cancellationToken);
 
@@ -35,7 +37,9 @@ public class ScoringService : IScoringService
         Guid matchId,
         CancellationToken cancellationToken = default)
     {
-        var match = await _context.Matches
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var match = await context.Matches
             .Include(m => m.GoalScorers)
             .FirstOrDefaultAsync(m => m.Id == matchId, cancellationToken);
 
@@ -48,21 +52,21 @@ public class ScoringService : IScoringService
         if (match.HomeScore is null || match.AwayScore is null)
             return Result.Success();
 
-        var predictions = await _context.Predictions
+        var predictions = await context.Predictions
             .Where(p => p.MatchId == matchId)
             .ToListAsync(cancellationToken);
 
         if (predictions.Count == 0)
             return Result.Success();
 
-        var config = await _context.ScoringConfigurations
+        var config = await context.ScoringConfigurations
             .FirstOrDefaultAsync(c => c.IsActive, cancellationToken);
 
         if (config is null)
             return Result.Failure("Brak aktywnej konfiguracji punktacji.");
 
         var userIds = predictions.Select(p => p.UserId).Distinct().ToList();
-        var profiles = await _context.UserProfiles
+        var profiles = await context.UserProfiles
             .Where(p => userIds.Contains(p.UserId))
             .ToDictionaryAsync(p => p.UserId, cancellationToken);
 
@@ -79,13 +83,15 @@ public class ScoringService : IScoringService
             ApplyPointsDelta(prediction, profiles, earned, basePoints, teamBonus, playerGoalBonus);
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 
     public async Task UpdateLiveScoresForInProgressMatchesAsync(CancellationToken cancellationToken = default)
     {
-        var matchIds = await _context.Matches
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var matchIds = await context.Matches
             .AsNoTracking()
             .Where(m => m.Status == MatchStatus.InProgress
                         && m.HomeScore != null
@@ -99,7 +105,9 @@ public class ScoringService : IScoringService
 
     public async Task<Result> RescoreMatchAsync(Guid matchId, CancellationToken cancellationToken = default)
     {
-        var match = await _context.Matches
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var match = await context.Matches
             .Include(m => m.GoalScorers)
             .FirstOrDefaultAsync(m => m.Id == matchId, cancellationToken);
 
@@ -112,7 +120,7 @@ public class ScoringService : IScoringService
         if (match.HomeScore is null || match.AwayScore is null)
             return Result.Failure("Wynik meczu nie jest uzupełniony.");
 
-        var predictions = await _context.Predictions
+        var predictions = await context.Predictions
             .Where(p => p.MatchId == matchId)
             .ToListAsync(cancellationToken);
 
@@ -120,7 +128,7 @@ public class ScoringService : IScoringService
             return Result.Success();
 
         var userIds = predictions.Select(p => p.UserId).Distinct().ToList();
-        var profiles = await _context.UserProfiles
+        var profiles = await context.UserProfiles
             .Where(p => userIds.Contains(p.UserId))
             .ToDictionaryAsync(p => p.UserId, cancellationToken);
 
@@ -143,7 +151,7 @@ public class ScoringService : IScoringService
             pred.UpdatedAt        = DateTime.UtcNow;
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
 
         return await RecalculateMatchScoresAsync(matchId, cancellationToken);
     }
@@ -152,19 +160,21 @@ public class ScoringService : IScoringService
         Guid winnerTeamId,
         CancellationToken cancellationToken = default)
     {
-        var teamExists = await _context.Teams
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var teamExists = await context.Teams
             .AnyAsync(t => t.Id == winnerTeamId, cancellationToken);
 
         if (!teamExists)
             return Result.Failure("Drużyna nie istnieje.");
 
-        var config = await _context.ScoringConfigurations
+        var config = await context.ScoringConfigurations
             .FirstOrDefaultAsync(c => c.IsActive, cancellationToken);
 
         if (config is null)
             return Result.Failure("Brak aktywnej konfiguracji punktacji.");
 
-        var profiles = await _context.UserProfiles
+        var profiles = await context.UserProfiles
             .Where(p => p.SelectedTeamId == winnerTeamId)
             .ToListAsync(cancellationToken);
 
@@ -175,7 +185,7 @@ public class ScoringService : IScoringService
             profile.UpdatedAt = DateTime.UtcNow;
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 

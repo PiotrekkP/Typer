@@ -7,16 +7,18 @@ namespace Typer.Infrastructure.Services;
 
 public class RankingService : IRankingService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-    public RankingService(ApplicationDbContext context)
+    public RankingService(IDbContextFactory<ApplicationDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<IReadOnlyList<RankingEntryDto>> GetLeaderboardAsync(CancellationToken cancellationToken = default)
     {
-        var entries = await _context.UserProfiles
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var entries = await context.UserProfiles
             .Include(p => p.SelectedTeam)
             .Include(p => p.SelectedPlayer)
             .OrderByDescending(p => p.TotalPoints)

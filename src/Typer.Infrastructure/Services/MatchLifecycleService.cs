@@ -10,25 +10,27 @@ namespace Typer.Infrastructure.Services;
 
 public class MatchLifecycleService : IMatchLifecycleService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
     private readonly IScoringService _scoringService;
     private readonly ILogger<MatchLifecycleService> _logger;
 
     public MatchLifecycleService(
-        ApplicationDbContext context,
+        IDbContextFactory<ApplicationDbContext> contextFactory,
         IScoringService scoringService,
         ILogger<MatchLifecycleService> logger)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _scoringService = scoringService;
         _logger = logger;
     }
 
     public async Task AdvanceStatusesAsync(CancellationToken cancellationToken = default)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
         var now = DateTime.UtcNow;
 
-        var toStart = await _context.Matches
+        var toStart = await context.Matches
             .Where(m => m.Status == MatchStatus.Scheduled && m.KickOffUtc <= now)
             .ToListAsync(cancellationToken);
 
@@ -40,11 +42,11 @@ public class MatchLifecycleService : IMatchLifecycleService
         }
 
         if (toStart.Count > 0)
-            await _context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
 
         var liveEndsBefore = now - MatchLifecycleRules.LiveDuration;
 
-        var toFinish = await _context.Matches
+        var toFinish = await context.Matches
             .Where(m => m.Status == MatchStatus.InProgress && m.KickOffUtc <= liveEndsBefore)
             .ToListAsync(cancellationToken);
 
@@ -56,7 +58,7 @@ public class MatchLifecycleService : IMatchLifecycleService
         }
 
         if (toFinish.Count > 0)
-            await _context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
 
         foreach (var match in toFinish)
         {

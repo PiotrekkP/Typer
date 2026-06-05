@@ -8,7 +8,10 @@ public record UserSelectionDto(
     Guid? SelectedPlayerId,
     string? SelectedPlayerName,
     int? SelectedPlayerNumber,
-    int TotalPoints);
+    string? SelectedPlayerPhotoUrl,
+    int TotalPoints,
+    int TeamBonusPoints,
+    int PlayerGoalPoints);
 
 public record UserPredictionHistoryDto(
     Guid MatchId,

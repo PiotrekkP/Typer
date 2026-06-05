@@ -12,16 +12,16 @@ namespace Typer.Infrastructure.Services;
 
 public class MatchService : IMatchService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
     private readonly IScoringService _scoringService;
     private readonly ILogger<MatchService> _logger;
 
     public MatchService(
-        ApplicationDbContext context,
+        IDbContextFactory<ApplicationDbContext> contextFactory,
         IScoringService scoringService,
         ILogger<MatchService> logger)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _scoringService = scoringService;
         _logger = logger;
     }
@@ -30,7 +30,9 @@ public class MatchService : IMatchService
         string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var rounds = await _context.Rounds
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var rounds = await context.Rounds
             .Include(r => r.Matches)
                 .ThenInclude(m => m.HomeTeam)
             .Include(r => r.Matches)
@@ -47,7 +49,7 @@ public class MatchService : IMatchService
         {
             var matchIds = rounds.SelectMany(r => r.Matches).Select(m => m.Id).ToList();
 
-            predictions = await _context.Predictions
+            predictions = await context.Predictions
                 .Where(p => p.UserId == userId && matchIds.Contains(p.MatchId))
                 .AsNoTracking()
                 .ToDictionaryAsync(
@@ -98,13 +100,14 @@ public class MatchService : IMatchService
         )).ToList();
     }
 
-    // ── GetUpcomingMatchesAsync ──────────────────────────────────
     public async Task<IReadOnlyList<MatchDetailDto>> GetUpcomingMatchesAsync(
         int count = 5,
         string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var matches = await _context.Matches
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var matches = await context.Matches
             .Include(m => m.HomeTeam)
             .Include(m => m.AwayTeam)
             .Include(m => m.GoalScorers.OrderBy(g => g.Minute))
@@ -114,16 +117,17 @@ public class MatchService : IMatchService
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        return await MapToDetailDtos(matches, userId, cancellationToken);
+        return await MapToDetailDtos(context, matches, userId, cancellationToken);
     }
 
-    // ── GetRecentFinishedMatchesAsync ────────────────────────────
     public async Task<IReadOnlyList<MatchDetailDto>> GetRecentFinishedMatchesAsync(
         int count = 5,
         string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var matches = await _context.Matches
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var matches = await context.Matches
             .Include(m => m.HomeTeam)
             .Include(m => m.AwayTeam)
             .Include(m => m.GoalScorers.OrderBy(g => g.Minute))
@@ -133,11 +137,11 @@ public class MatchService : IMatchService
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        return await MapToDetailDtos(matches, userId, cancellationToken);
+        return await MapToDetailDtos(context, matches, userId, cancellationToken);
     }
 
-    // ── Pomocnicza metoda mapowania ───────────────────────────────
-    private async Task<IReadOnlyList<MatchDetailDto>> MapToDetailDtos(
+    private static async Task<IReadOnlyList<MatchDetailDto>> MapToDetailDtos(
+        ApplicationDbContext context,
         List<Typer.Domain.Entities.Match> matches,
         string? userId,
         CancellationToken cancellationToken)
@@ -147,7 +151,7 @@ public class MatchService : IMatchService
         if (userId is not null && matches.Count > 0)
         {
             var ids = matches.Select(m => m.Id).ToList();
-            predictions = await _context.Predictions
+            predictions = await context.Predictions
                 .Where(p => p.UserId == userId && ids.Contains(p.MatchId))
                 .AsNoTracking()
                 .ToDictionaryAsync(
@@ -176,13 +180,14 @@ public class MatchService : IMatchService
         }).ToList();
     }
 
-    // ── UpdateMatchResultAsync ───────────────────────────────────
     public async Task<Result> UpdateMatchResultAsync(
         Guid matchId,
         UpdateMatchResultRequest request,
         CancellationToken cancellationToken = default)
     {
-        var match = await _context.Matches
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var match = await context.Matches
             .FirstOrDefaultAsync(m => m.Id == matchId, cancellationToken);
 
         if (match is null)
@@ -193,7 +198,7 @@ public class MatchService : IMatchService
         match.Status    = request.Status;
         match.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
 
         if (request.Status == MatchStatus.InProgress
             || match.Status == MatchStatus.InProgress)
@@ -201,7 +206,6 @@ public class MatchService : IMatchService
             await _scoringService.RecalculateMatchScoresAsync(matchId, cancellationToken);
         }
 
-        // Automatyczne przyznanie punktów przy zamknięciu meczu
         if (request.Status == MatchStatus.Finished)
         {
             var scoringResult = await _scoringService.ScoreMatchAsync(matchId, cancellationToken);

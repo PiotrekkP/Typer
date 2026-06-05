@@ -1,4 +1,10 @@
 (function () {
+    window.typerOpenProfileEdit = function (mode) {
+        var id = mode === 'player' ? 'profile-edit-player' : 'profile-edit-team';
+        var cb = document.getElementById(id);
+        if (cb) cb.checked = true;
+    };
+
     document.addEventListener('change', function (e) {
         if (!e.target.classList.contains('profile-edit-toggle')) return;
         if (!e.target.checked) return;

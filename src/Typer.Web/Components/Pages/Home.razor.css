@@ -121,43 +121,96 @@
     border: none;
 }
 
-/* ── Profile card ────────────────────────────────────────── */
-.profile-card {
+/* ── Profile split card ───────────────────────────────────── */
+.profile-split {
     display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 12px 0;
+    align-items: stretch;
+    gap: 0;
+    flex: 1;
+    min-height: 180px;
 }
 
-.profile-card__flag {
-    width: 80px;
-    height: 56px;
+.profile-split__half {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 12px 8px;
+    gap: 6px;
+}
+
+.profile-split__divider {
+    width: 1px;
+    background: #e5e7eb;
+    align-self: stretch;
+    margin: 8px 0;
+}
+
+.profile-split__flag {
+    width: 72px;
+    height: 50px;
     object-fit: cover;
     border-radius: 8px;
     border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.profile-split__photo {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    object-position: center 20%;
+    border-radius: 50%;
+    border: 2px solid #e5e7eb;
     box-shadow: 0 2px 8px rgba(0,0,0,.1);
-    flex-shrink: 0;
 }
 
-.profile-card__info { display: flex; flex-direction: column; gap: 4px; }
-
-.profile-card__team {
+.profile-split__photo--placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    color: #9ca3af;
+    font-weight: 700;
     font-size: 1.1rem;
-    font-weight: 800;
+}
+
+.profile-split__label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: #9ca3af;
+}
+
+.profile-split__name {
+    font-size: 0.9rem;
+    font-weight: 700;
     color: #111827;
+    line-height: 1.2;
 }
 
-.profile-card__player {
-    font-size: 0.875rem;
-    color: #374151;
-}
+.profile-split__name--empty a { color: #3b82f6; font-weight: 500; font-size: 0.85rem; }
 
-.profile-card__player--empty a { color: #3b82f6; }
-
-.profile-card__points {
-    font-size: 0.82rem;
-    color: #6b7280;
+.profile-split__pts {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     margin-top: 4px;
+}
+
+.profile-split__pts-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1d4ed8;
+    line-height: 1;
+}
+
+.profile-split__pts-label {
+    font-size: 0.72rem;
+    color: #6b7280;
 }
 
 .profile-links {

@@ -7,18 +7,20 @@ namespace Typer.Infrastructure.Services;
 
 public class UserProfileService : IUserProfileService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-    public UserProfileService(ApplicationDbContext context)
+    public UserProfileService(IDbContextFactory<ApplicationDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<UserSelectionDto?> GetSelectionAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
-        var profile = await _context.UserProfiles
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var profile = await context.UserProfiles
             .Include(p => p.SelectedTeam)
             .Include(p => p.SelectedPlayer)
             .AsNoTracking()
@@ -36,14 +38,19 @@ public class UserProfileService : IUserProfileService
             profile.SelectedPlayer is null ? null
                 : $"{profile.SelectedPlayer.FirstName} {profile.SelectedPlayer.LastName}",
             profile.SelectedPlayer?.JerseyNumber,
-            profile.TotalPoints);
+            profile.SelectedPlayer?.PhotoUrl,
+            profile.TotalPoints,
+            profile.TeamBonusPoints,
+            profile.PlayerGoalPoints);
     }
 
     public async Task<UserPublicProfileDto?> GetPublicProfileAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
-        var profile = await _context.UserProfiles
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var profile = await context.UserProfiles
             .Include(p => p.SelectedTeam)
             .Include(p => p.SelectedPlayer)
             .AsNoTracking()
@@ -52,13 +59,11 @@ public class UserProfileService : IUserProfileService
         if (profile is null)
             return null;
 
-        // Pozycja w rankingu (ile osób ma więcej punktów + 1)
-        var position = await _context.UserProfiles
+        var position = await context.UserProfiles
             .AsNoTracking()
             .CountAsync(p => p.TotalPoints > profile.TotalPoints, cancellationToken) + 1;
 
-        // Historia typów (zakończone mecze z przyznanymi punktami)
-        var history = await _context.Predictions
+        var history = await context.Predictions
             .Where(p => p.UserId == userId && p.PointsAwarded.HasValue)
             .Include(p => p.Match)
                 .ThenInclude(m => m.HomeTeam)

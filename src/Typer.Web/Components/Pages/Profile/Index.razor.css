@@ -117,7 +117,7 @@
 
 .rank-badge--gold    { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
 .rank-badge--silver  { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-.rank-badge--bronze  { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.rank-badge--bronze  { background: #ddb892; color: #3d2314; border: 1px solid #8b4513; }
 .rank-badge--other   { background: #f9fafb; color: #374151; border: 1px solid #e5e7eb; }
 
 .profile-total-pts {
@@ -164,11 +164,11 @@
     grid-column: 3;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     width: max-content;
-    max-width: 220px;
+    max-width: 260px;
     border-left: 1px solid #f3f4f6;
-    padding-left: 20px;
+    padding-left: 24px;
     align-self: center;
 }
 
@@ -211,6 +211,21 @@
 
 .selection-label { font-size: 0.68rem; color: #9ca3af; text-transform: uppercase; letter-spacing: .3px; }
 .selection-value { font-size: 0.9rem;  font-weight: 700; color: #111827; }
+
+.selection-row--filled .selection-flag:not(.selection-flag--empty):not(.selection-flag--placeholder) {
+    width: 48px;
+    height: 34px;
+}
+
+.selection-row--filled .selection-jersey:not(.selection-jersey--empty) {
+    width: 38px;
+    height: 38px;
+    font-size: 0.95rem;
+}
+
+.selection-row--filled .selection-value {
+    font-size: 1.02rem;
+}
 
 .selection-empty { color: #9ca3af; font-size: 0.85rem; font-style: italic; }
 
@@ -295,7 +310,7 @@
     margin: 0;
 }
 
-.selection-picker__group { margin-bottom: 14px; }
+.selection-picker__group { margin-bottom: 14px; text-align: center; }
 .selection-picker__group:last-child { margin-bottom: 0; }
 
 .selection-picker__group-title {
@@ -305,11 +320,13 @@
     letter-spacing: .5px;
     color: #9ca3af;
     margin: 0 0 8px;
+    text-align: center;
 }
 
 .selection-picker__teams {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 8px;
 }
 
@@ -318,6 +335,7 @@
     flex-direction: column;
     align-items: center;
     gap: 6px;
+    width: 120px;
     padding: 10px 8px;
     background: #fff;
     border: 2px solid #e5e7eb;
@@ -423,6 +441,16 @@
     min-width: 36px;
     text-align: center;
     flex-shrink: 0;
+}
+
+.player-picker-card__photo {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    object-position: center 20%;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid #e5e7eb;
 }
 
 .player-picker-card__info {

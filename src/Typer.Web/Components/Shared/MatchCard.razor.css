@@ -193,6 +193,7 @@
 .match-prediction__inputs {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     flex-wrap: wrap;
 }
@@ -237,6 +238,7 @@
 .match-prediction__result {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
 }
 

@@ -11,16 +11,18 @@ namespace Typer.Infrastructure.Services;
 
 public class PredictionService : IPredictionService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-    public PredictionService(ApplicationDbContext context)
+    public PredictionService(IDbContextFactory<ApplicationDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<IReadOnlyList<MatchDto>> GetUpcomingMatchesAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Matches
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await context.Matches
             .Include(m => m.HomeTeam)
             .Include(m => m.AwayTeam)
             .Where(m => m.Status == MatchStatus.Scheduled || m.Status == MatchStatus.InProgress)
@@ -40,7 +42,9 @@ public class PredictionService : IPredictionService
 
     public async Task<IReadOnlyList<PredictionDto>> GetUserPredictionsAsync(string userId, CancellationToken cancellationToken = default)
     {
-        return await _context.Predictions
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await context.Predictions
             .Where(p => p.UserId == userId)
             .OrderByDescending(p => p.SubmittedAt)
             .Select(p => new PredictionDto(
@@ -55,23 +59,19 @@ public class PredictionService : IPredictionService
 
     public async Task<Result<PredictionDto>> SubmitAsync(string userId, SubmitPredictionRequest request, CancellationToken cancellationToken = default)
     {
-        var match = await _context.Matches.FirstOrDefaultAsync(m => m.Id == request.MatchId, cancellationToken);
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var match = await context.Matches.FirstOrDefaultAsync(m => m.Id == request.MatchId, cancellationToken);
         if (match is null)
-        {
             return Result<PredictionDto>.Failure("Mecz nie istnieje.");
-        }
 
         if (match.Status != MatchStatus.Scheduled)
-        {
             return Result<PredictionDto>.Failure("Typowanie na ten mecz jest zamknięte.");
-        }
 
         if (!MatchLifecycleRules.IsBeforeKickOff(match.KickOffUtc))
-        {
             return Result<PredictionDto>.Failure("Nie można typować meczu, który już się rozpoczął.");
-        }
 
-        var existing = await _context.Predictions
+        var existing = await context.Predictions
             .FirstOrDefaultAsync(p => p.UserId == userId && p.MatchId == request.MatchId, cancellationToken);
 
         if (existing is not null)
@@ -81,7 +81,7 @@ public class PredictionService : IPredictionService
             existing.SubmittedAt = DateTime.UtcNow;
             existing.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
 
             return Result<PredictionDto>.Success(new PredictionDto(
                 existing.Id,
@@ -103,8 +103,8 @@ public class PredictionService : IPredictionService
             CreatedAt = DateTime.UtcNow
         };
 
-        _context.Predictions.Add(prediction);
-        await _context.SaveChangesAsync(cancellationToken);
+        context.Predictions.Add(prediction);
+        await context.SaveChangesAsync(cancellationToken);
 
         return Result<PredictionDto>.Success(new PredictionDto(
             prediction.Id,

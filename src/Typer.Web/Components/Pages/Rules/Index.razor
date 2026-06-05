@@ -1,0 +1,140 @@
+@page "/zasady"
+
+<PageTitle>Zasady — Typer</PageTitle>
+
+<div class="rules-page">
+
+    <header class="rules-hero">
+        <h1 class="rules-hero__title">Zasady ligi</h1>
+    </header>
+
+    <section class="rules-section">
+        <h2 class="rules-section__title">Na czym polega gra?</h2>
+        <div class="rules-cards">
+            <article class="rules-card">
+                <span class="rules-card__icon">📝</span>
+                <h3>Typuj mecze</h3>
+                <p>Przed rozpoczęciem każdego meczu wpisujesz przewidywany wynik (np. 2:1). Typ możesz zmieniać do momentu rozpoczęcia spotkania.</p>
+            </article>
+            <article class="rules-card">
+                <span class="rules-card__icon">🌍</span>
+                <h3>Wybierz reprezentację</h3>
+                <p>W profilu wskazujesz drużynę narodową, która twoim zdaniem zostanie mistrzem świata. Punkty uzyskane za mecze tej drużyny są podwajane.</p>
+            </article>
+            <article class="rules-card">
+                <span class="rules-card__icon">👟</span>
+                <h3>Wybierz zawodnika</h3>
+                <p>Poza reprezentacją wybierasz też zawodnika, który twoim zdaniem strzeli najwięcej goli. Za każdą jego bramkę dostajesz dodatkowe punkty.</p>
+            </article>
+            <article class="rules-card">
+                <span class="rules-card__icon">🏆</span>
+                <h3>Walcz w rankingu</h3>
+                <p>Suma punktów z typów, bonusów za drużynę i zawodnika decyduje o miejscu w tabeli.</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="rules-section">
+        <h2 class="rules-section__title">Punktacja</h2>
+        <div class="rules-table-wrapper">
+            <table class="rules-table">
+                <thead>
+                    <tr>
+                        <th>Trafienie</th>
+                        <th>Punkty</th>
+                        <th>Przykład</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Dokładny wynik</strong></td>
+                        <td class="rules-table__pts">5 pkt</td>
+                        <td>Typ 2:1, wynik 2:1</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Trafione 1x2 + różnica bramek</strong></td>
+                        <td class="rules-table__pts">3 pkt</td>
+                        <td>Typ 3:1, wynik 2:0; typ 1:1, wynik 2:2</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Trafione 1x2</strong></td>
+                        <td class="rules-table__pts">2 pkt</td>
+                        <td>Typ 1:0, wynik 3:2</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Brak trafienia</strong></td>
+                        <td class="rules-table__pts rules-table__pts--zero">0 pkt</td>
+                        <td>Typ 2:0, wynik 1:2</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="rules-section">
+        <h2 class="rules-section__title">Bonusy</h2>
+        <ul class="rules-list">
+            <li>
+                <span class="rules-list__badge rules-list__badge--team">★ ×2</span>
+                <div>
+                    <strong>Twoja reprezentacja gra w meczu</strong>
+                    <p>Punkty bazowe za typ są mnożone przez 2. Np. dokładny wynik daje 10 pkt.</p>
+                </div>
+            </li>
+            <li>
+                <span class="rules-list__badge rules-list__badge--player">👟 +3</span>
+                <div>
+                    <strong>Gol wybranego zawodnika</strong>
+                    <p>Za każdą bramkę Twojego zawodnika dostajesz 3 pkt.</p>
+                </div>
+            </li>
+            <li>
+                <span class="rules-list__badge rules-list__badge--trophy">🏆 +20</span>
+                <div>
+                    <strong>Mistrz turnieju</strong>
+                    <p>Jeśli wybrana reprezentacja wygra całe rozgrywki, na koniec dostajesz jednorazowy bonus 20 pkt.</p>
+                </div>
+            </li>
+        </ul>
+    </section>
+
+    <section class="rules-section">
+        <h2 class="rules-section__title">Profil gracza</h2>
+        <div class="rules-steps">
+            <div class="rules-step">
+                <span class="rules-step__num">1</span>
+                <p><a href="/rejestracja">Załóż konto</a> lub <a href="/logowanie">zaloguj się</a>.</p>
+            </div>
+            <div class="rules-step">
+                <span class="rules-step__num">2</span>
+                <p>Wejdź w <a href="/profil">Profil</a> i wybierz reprezentację (ikona ołówka przy fladze).</p>
+            </div>
+            <div class="rules-step">
+                <span class="rules-step__num">3</span>
+                <p>Wybierz zawodnika — na początku widzisz listę MVP; możesz też wyszukać innych po nazwisku.</p>
+            </div>
+            <div class="rules-step">
+                <span class="rules-step__num">4</span>
+                <p>Typuj wyniki w zakładce <a href="/typowanie">Typowanie</a> lub na stronie głównej.</p>
+            </div>
+        </div>
+        <p class="rules-note">Wybór drużyny i zawodnika możesz zmienić w dowolnym momencie sezonu — punkty już zdobyte zostają na koncie.</p>
+    </section>
+
+    <section class="rules-section rules-section--cta">
+        <h2 class="rules-section__title">Gotowy do gry?</h2>
+        <div class="rules-cta">
+            <AuthorizeView>
+                <Authorized>
+                    <a href="/typowanie" class="rules-cta__btn rules-cta__btn--primary">Typuj mecze →</a>
+                    <a href="/profil" class="rules-cta__btn">Uzupełnij profil</a>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="/rejestracja" class="rules-cta__btn rules-cta__btn--primary">Dołącz do ligi →</a>
+                    <a href="/logowanie" class="rules-cta__btn">Mam już konto</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </section>
+
+</div>

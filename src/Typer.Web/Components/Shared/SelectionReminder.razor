@@ -1,0 +1,69 @@
+@using Typer.Application.UserProfile.Interfaces
+@implements IDisposable
+
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IUserProfileService UserProfileService
+@inject NavigationManager Nav
+@inject IUserSelectionEvents SelectionEvents
+
+@if (_showBanner)
+{
+    <div class="selection-reminder">
+        <a href="/profil?edit=team" class="selection-reminder__btn">
+            Wybierz reprezentację i zawodnika
+        </a>
+    </div>
+}
+
+@code {
+    private bool _showBanner;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        Nav.LocationChanged += OnLocationChanged;
+        SelectionEvents.SelectionChanged += OnSelectionChanged;
+        await RefreshAsync();
+    }
+
+    private async void OnSelectionChanged()
+    {
+        await RefreshAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        await RefreshAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        await RefreshAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = auth.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userId is null)
+        {
+            _showBanner = false;
+            return;
+        }
+
+        var selection = await UserProfileService.GetSelectionAsync(userId);
+        _showBanner = selection is not null
+            && (selection.SelectedTeamId is null || selection.SelectedPlayerId is null);
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+        SelectionEvents.SelectionChanged -= OnSelectionChanged;
+    }
+}

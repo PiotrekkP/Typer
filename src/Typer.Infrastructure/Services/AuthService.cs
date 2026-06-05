@@ -1,9 +1,9 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using Typer.Application.Auth.DTOs;
 using Typer.Application.Auth.Interfaces;
@@ -18,16 +18,16 @@ namespace Typer.Infrastructure.Services;
 public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
     private readonly JwtSettings _jwtSettings;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
-        ApplicationDbContext context,
+        IDbContextFactory<ApplicationDbContext> contextFactory,
         IOptions<JwtSettings> jwtSettings)
     {
         _userManager = userManager;
-        _context = context;
+        _contextFactory = contextFactory;
         _jwtSettings = jwtSettings.Value;
     }
 
@@ -35,9 +35,7 @@ public class AuthService : IAuthService
     {
         var existingUser = await _userManager.FindByEmailAsync(request.Email);
         if (existingUser is not null)
-        {
             return Result<AuthResponse>.Failure("Użytkownik o podanym adresie e-mail już istnieje.");
-        }
 
         var user = new ApplicationUser
         {
@@ -53,7 +51,9 @@ public class AuthService : IAuthService
             return Result<AuthResponse>.Failure(error);
         }
 
-        _context.UserProfiles.Add(new UserProfile
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        context.UserProfiles.Add(new UserProfile
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
@@ -61,7 +61,7 @@ public class AuthService : IAuthService
             CreatedAt = DateTime.UtcNow
         });
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
 
         return Result<AuthResponse>.Success(CreateAuthResponse(user));
     }
@@ -70,15 +70,11 @@ public class AuthService : IAuthService
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user is null)
-        {
             return Result<AuthResponse>.Failure("Nieprawidłowy e-mail lub hasło.");
-        }
 
         var passwordValid = await _userManager.CheckPasswordAsync(user, request.Password);
         if (!passwordValid)
-        {
             return Result<AuthResponse>.Failure("Nieprawidłowy e-mail lub hasło.");
-        }
 
         return Result<AuthResponse>.Success(CreateAuthResponse(user));
     }

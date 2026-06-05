@@ -67,8 +67,8 @@
 }
 
 .podium__place--3 {
-    background: linear-gradient(145deg, #fef3c7, #fde68a);
-    border-color: #d97706;
+    background: linear-gradient(145deg, #ddb892, #9c5b24);
+    border-color: #6b3a1f;
     order: 3;
 }
 
@@ -117,7 +117,7 @@
 /* ── Wiersze medalowe ─────────────────────────────────────── */
 .ranking-row--gold   { background: #fefce8; }
 .ranking-row--silver { background: #f9fafb; }
-.ranking-row--bronze { background: #fffbeb; }
+.ranking-row--bronze { background: #ead9c8; }
 .ranking-row--other  { background: #fff; }
 
 .ranking-row:last-child td { border-bottom: none; }
@@ -138,7 +138,7 @@
 
 .position-badge--gold   { background: #fef08a; color: #713f12; font-size: 1.2rem; }
 .position-badge--silver { background: #e5e7eb; color: #374151; font-size: 1.2rem; }
-.position-badge--bronze { background: #fde68a; color: #78350f; font-size: 1.2rem; }
+.position-badge--bronze { background: #9c5b24; color: #fff8f0; font-size: 1.2rem; }
 .position-badge--other  { background: #f3f4f6; color: #6b7280; }
 
 /* ── Kolumny ──────────────────────────────────────────────── */

@@ -9,6 +9,7 @@ public record PlayerDto(
     string? Position,
     string? Club,
     bool IsMvp,
+    string? PhotoUrl,
     string? TeamName,
     string? TeamFlagUrl);
 
