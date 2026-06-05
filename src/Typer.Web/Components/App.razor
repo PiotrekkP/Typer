@@ -1,5 +1,4 @@
-﻿@using static Microsoft.AspNetCore.Components.Web.RenderMode
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pl">
 
 <head>
@@ -14,7 +13,7 @@
 </head>
 
 <body>
-    <Routes @rendermode="@(new InteractiveServerRenderMode(prerender: false))" />
+    <Routes @rendermode="InteractiveServer" />
     <script src="site-nav.js"></script>
     <script src="profile-edit.js"></script>
     <script src="_framework/blazor.web.js"></script>
