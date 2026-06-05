@@ -26,6 +26,10 @@ secrets.json
 *.pfx
 *.p12
 
+## Deployment secrets (example tracked, real .env never committed)
+deploy/.env
+!deploy/.env.example
+
 ## EF Core
 # migrations are intentionally tracked – no exclusion
 
