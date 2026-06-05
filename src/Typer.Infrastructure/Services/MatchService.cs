@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Typer.Application.Common.Models;
+using Typer.Application.Matches;
 using Typer.Application.Matches.DTOs;
 using Typer.Application.Matches.Interfaces;
 using Typer.Application.Scoring.Interfaces;
@@ -65,14 +66,8 @@ public class MatchService : IMatchService
                 .Select(match =>
                 {
                     predictions.TryGetValue(match.Id, out var pred);
-
-                    var predictionStatus = match.Status switch
-                    {
-                        MatchStatus.Finished  => "Scored",
-                        MatchStatus.Cancelled => "Locked",
-                        MatchStatus.Scheduled when match.KickOffUtc > DateTime.UtcNow => "Open",
-                        _ => "Locked"
-                    };
+                    var effectiveStatus = MatchLifecycleRules.GetEffectiveStatusName(match.Status, match.KickOffUtc);
+                    var predictionStatus = MatchLifecycleRules.GetPredictionStatus(match.Status, match.KickOffUtc);
 
                     return new MatchDetailDto(
                         match.Id,
@@ -84,8 +79,8 @@ public class MatchService : IMatchService
                         match.AwayTeam.Name,
                         match.AwayTeam.Code,
                         match.AwayTeam.FlagUrl,
-                        match.KickOffUtc,
-                        match.Status.ToString(),
+                        MatchLifecycleRules.EnsureUtc(match.KickOffUtc),
+                        effectiveStatus,
                         match.HomeScore,
                         match.AwayScore,
                         match.GoalScorers
@@ -165,18 +160,15 @@ public class MatchService : IMatchService
         return matches.Select(match =>
         {
             predictions.TryGetValue(match.Id, out var pred);
-            var predictionStatus = match.Status switch
-            {
-                MatchStatus.Finished  => "Scored",
-                MatchStatus.Cancelled => "Locked",
-                MatchStatus.Scheduled when match.KickOffUtc > DateTime.UtcNow => "Open",
-                _ => "Locked"
-            };
+            var effectiveStatus = MatchLifecycleRules.GetEffectiveStatusName(match.Status, match.KickOffUtc);
+            var predictionStatus = MatchLifecycleRules.GetPredictionStatus(match.Status, match.KickOffUtc);
+
             return new MatchDetailDto(
                 match.Id,
                 match.HomeTeamId, match.HomeTeam.Name, match.HomeTeam.Code, match.HomeTeam.FlagUrl,
                 match.AwayTeamId, match.AwayTeam.Name, match.AwayTeam.Code, match.AwayTeam.FlagUrl,
-                match.KickOffUtc, match.Status.ToString(),
+                MatchLifecycleRules.EnsureUtc(match.KickOffUtc),
+                effectiveStatus,
                 match.HomeScore, match.AwayScore,
                 match.GoalScorers.Select(g => new GoalScorerDto(g.PlayerName, g.IsHomeTeam, g.Minute, g.IsOwnGoal, g.IsPenalty)).ToList(),
                 pred.Home, pred.Away, pred.Points, pred.Base, pred.TeamBonus, pred.PlayerGoal,
@@ -202,6 +194,12 @@ public class MatchService : IMatchService
         match.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        if (request.Status == MatchStatus.InProgress
+            || match.Status == MatchStatus.InProgress)
+        {
+            await _scoringService.RecalculateMatchScoresAsync(matchId, cancellationToken);
+        }
 
         // Automatyczne przyznanie punktów przy zamknięciu meczu
         if (request.Status == MatchStatus.Finished)

@@ -38,6 +38,7 @@ public record UserPublicProfileDto(
     Guid? SelectedTeamId,
     string? SelectedTeamName,
     string? SelectedTeamFlagUrl,
+    Guid? SelectedPlayerId,
     string? SelectedPlayerName,
     int? SelectedPlayerNumber,
     IReadOnlyList<UserPredictionHistoryDto> PredictionHistory);

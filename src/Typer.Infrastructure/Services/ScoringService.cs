@@ -16,11 +16,10 @@ public class ScoringService : IScoringService
         _context = context;
     }
 
-    // ── ScoreMatchAsync ──────────────────────────────────────────
     public async Task<Result> ScoreMatchAsync(Guid matchId, CancellationToken cancellationToken = default)
     {
         var match = await _context.Matches
-            .Include(m => m.GoalScorers)
+            .AsNoTracking()
             .FirstOrDefaultAsync(m => m.Id == matchId, cancellationToken);
 
         if (match is null)
@@ -29,8 +28,25 @@ public class ScoringService : IScoringService
         if (match.Status != MatchStatus.Finished)
             return Result.Failure("Mecz nie jest jeszcze zakończony.");
 
+        return await RecalculateMatchScoresAsync(matchId, cancellationToken);
+    }
+
+    public async Task<Result> RecalculateMatchScoresAsync(
+        Guid matchId,
+        CancellationToken cancellationToken = default)
+    {
+        var match = await _context.Matches
+            .Include(m => m.GoalScorers)
+            .FirstOrDefaultAsync(m => m.Id == matchId, cancellationToken);
+
+        if (match is null)
+            return Result.Failure("Mecz nie istnieje.");
+
+        if (match.Status is not (MatchStatus.InProgress or MatchStatus.Finished))
+            return Result.Failure("Punkty live można liczyć tylko dla meczów na żywo lub zakończonych.");
+
         if (match.HomeScore is null || match.AwayScore is null)
-            return Result.Failure("Wynik meczu nie jest uzupełniony.");
+            return Result.Success();
 
         var predictions = await _context.Predictions
             .Where(p => p.MatchId == matchId)
@@ -38,9 +54,6 @@ public class ScoringService : IScoringService
 
         if (predictions.Count == 0)
             return Result.Success();
-
-        if (predictions.Any(p => p.PointsAwarded.HasValue))
-            return Result.Failure("Punkty za ten mecz zostały już przyznane. Użyj rescore aby przeliczyć.");
 
         var config = await _context.ScoringConfigurations
             .FirstOrDefaultAsync(c => c.IsActive, cancellationToken);
@@ -63,14 +76,27 @@ public class ScoringService : IScoringService
             var (earned, basePoints, teamBonus, playerGoalBonus) =
                 CalculatePoints(match, prediction, profiles, playerGoals, config);
 
-            ApplyPoints(prediction, profiles, earned, basePoints, teamBonus, playerGoalBonus);
+            ApplyPointsDelta(prediction, profiles, earned, basePoints, teamBonus, playerGoalBonus);
         }
 
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 
-    // ── RescoreMatchAsync ────────────────────────────────────────
+    public async Task UpdateLiveScoresForInProgressMatchesAsync(CancellationToken cancellationToken = default)
+    {
+        var matchIds = await _context.Matches
+            .AsNoTracking()
+            .Where(m => m.Status == MatchStatus.InProgress
+                        && m.HomeScore != null
+                        && m.AwayScore != null)
+            .Select(m => m.Id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var matchId in matchIds)
+            await RecalculateMatchScoresAsync(matchId, cancellationToken);
+    }
+
     public async Task<Result> RescoreMatchAsync(Guid matchId, CancellationToken cancellationToken = default)
     {
         var match = await _context.Matches
@@ -98,7 +124,6 @@ public class ScoringService : IScoringService
             .Where(p => userIds.Contains(p.UserId))
             .ToDictionaryAsync(p => p.UserId, cancellationToken);
 
-        // 1. Cofnij stare punkty używając zapisanego breakdown
         foreach (var pred in predictions.Where(p => p.PointsAwarded.HasValue))
         {
             if (!profiles.TryGetValue(pred.UserId, out var profile)) continue;
@@ -109,7 +134,6 @@ public class ScoringService : IScoringService
             profile.UpdatedAt = DateTime.UtcNow;
         }
 
-        // 2. Wyzeruj predykcje
         foreach (var pred in predictions)
         {
             pred.PointsAwarded    = null;
@@ -121,11 +145,9 @@ public class ScoringService : IScoringService
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        // 3. Przelicz od nowa
-        return await ScoreMatchAsync(matchId, cancellationToken);
+        return await RecalculateMatchScoresAsync(matchId, cancellationToken);
     }
 
-    // ── ScoreTournamentWinnerAsync ───────────────────────────────
     public async Task<Result> ScoreTournamentWinnerAsync(
         Guid winnerTeamId,
         CancellationToken cancellationToken = default)
@@ -156,8 +178,6 @@ public class ScoringService : IScoringService
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
-
-    // ── Pomocnicze ───────────────────────────────────────────────
 
     private static (int earned, int basePoints, int teamBonus, int playerGoalBonus) CalculatePoints(
         Domain.Entities.Match match,
@@ -196,11 +216,19 @@ public class ScoringService : IScoringService
         return (earned, basePoints, teamBonus, playerGoalBonus);
     }
 
-    private static void ApplyPoints(
+    private static void ApplyPointsDelta(
         Prediction prediction,
         Dictionary<string, UserProfile> profiles,
         int earned, int basePoints, int teamBonus, int playerGoalBonus)
     {
+        var deltaEarned  = earned - (prediction.PointsAwarded ?? 0);
+        var deltaBase    = basePoints - (prediction.BasePoints ?? 0);
+        var deltaTeam    = teamBonus - (prediction.TeamBonusPoints ?? 0);
+        var deltaPlayer  = playerGoalBonus - (prediction.PlayerGoalPoints ?? 0);
+
+        if (deltaEarned == 0 && deltaBase == 0 && deltaTeam == 0 && deltaPlayer == 0)
+            return;
+
         prediction.PointsAwarded    = earned;
         prediction.BasePoints       = basePoints;
         prediction.TeamBonusPoints  = teamBonus;
@@ -209,10 +237,10 @@ public class ScoringService : IScoringService
 
         if (profiles.TryGetValue(prediction.UserId, out var profile))
         {
-            profile.TotalPoints      += earned;
-            profile.PredictionPoints += basePoints;
-            profile.TeamBonusPoints  += teamBonus;
-            profile.PlayerGoalPoints += playerGoalBonus;
+            profile.TotalPoints      += deltaEarned;
+            profile.PredictionPoints += deltaBase;
+            profile.TeamBonusPoints  += deltaTeam;
+            profile.PlayerGoalPoints += deltaPlayer;
             profile.UpdatedAt = DateTime.UtcNow;
         }
     }

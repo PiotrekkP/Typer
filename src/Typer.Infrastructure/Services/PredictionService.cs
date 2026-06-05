@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Typer.Application.Common.Models;
+using Typer.Application.Matches;
 using Typer.Application.Predictions.DTOs;
 using Typer.Application.Predictions.Interfaces;
 using Typer.Domain.Entities;
@@ -65,7 +66,7 @@ public class PredictionService : IPredictionService
             return Result<PredictionDto>.Failure("Typowanie na ten mecz jest zamknięte.");
         }
 
-        if (match.KickOffUtc <= DateTime.UtcNow)
+        if (!MatchLifecycleRules.IsBeforeKickOff(match.KickOffUtc))
         {
             return Result<PredictionDto>.Failure("Nie można typować meczu, który już się rozpoczął.");
         }

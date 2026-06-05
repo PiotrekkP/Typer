@@ -1,3 +1,4 @@
+@using Typer.Application.Matches
 @using Typer.Domain.Enums
 @implements IAsyncDisposable
 
@@ -7,7 +8,7 @@
     <div class="match-kickoff">
         <span class="kickoff-time">@Match.KickOffUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
 
-        @if (Match.Status == "InProgress")
+        @if (ShowLiveBadge)
         {
             <span class="live-badge">
                 <span class="live-dot"></span>
@@ -15,7 +16,7 @@
             </span>
         }
 
-        <span class="match-status match-status--@Match.Status.ToLowerInvariant()">@StatusLabel</span>
+        <span class="match-status match-status--@DisplayStatusCss">@DisplayStatusLabel</span>
     </div>
 
     <!-- ── Drużyny + wynik ──────────────────────────────────── -->
@@ -30,7 +31,7 @@
         </div>
 
         <div class="match-score">
-            @if (Match.Status != "Scheduled")
+            @if (ShowActualScore)
             {
                 <span class="match-score__actual">@Match.HomeScore – @Match.AwayScore</span>
             }
@@ -81,7 +82,7 @@
         <div class="match-prediction">
 
             <div class="prediction-header">
-                <span class="pred-status pred-status--@Match.PredictionStatus.ToLowerInvariant()">
+                <span class="pred-status pred-status--@GetPredictionStatus().ToLowerInvariant()">
                     @PredictionStatusIcon @PredictionStatusLabel
                 </span>
 
@@ -122,7 +123,7 @@
                 }
             </div>
 
-            @if (Match.PredictionStatus == "Open")
+            @if (GetPredictionStatus() == "Open")
             {
                 <div class="match-prediction__inputs">
                     <span class="prediction-hint">Twój typ:</span>
@@ -187,16 +188,22 @@
             _predictedAway = Match.PredictedAwayScore;
 
         _saved = false;
+        EnsureLiveTimer();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || Match.Status != "InProgress") return;
+        EnsureLiveTimer();
+        await Task.CompletedTask;
+    }
+
+    private void EnsureLiveTimer()
+    {
+        if (_timer is not null || !NeedsLiveTimer) return;
 
         _cts   = new CancellationTokenSource();
-        _timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
         _ = RunTimerAsync(_cts.Token);
-        await Task.CompletedTask;
     }
 
     private async Task RunTimerAsync(CancellationToken ct)
@@ -218,11 +225,41 @@
     }
 
     // ── Żywa minuta meczu ───────────────────────────────────────
+    private MatchStatus EffectiveStatus
+    {
+        get
+        {
+            Enum.TryParse<MatchStatus>(Match.Status, out var stored);
+            return MatchLifecycleRules.GetEffectiveStatus(stored, Match.KickOffUtc);
+        }
+    }
+
+    private bool IsLivePeriod => EffectiveStatus == MatchStatus.InProgress;
+
+    private bool ShowLiveBadge => IsLivePeriod;
+
+    private bool NeedsLiveTimer =>
+        EffectiveStatus is not (MatchStatus.Finished or MatchStatus.Cancelled)
+        && DateTime.UtcNow < MatchLifecycleRules.EnsureUtc(Match.KickOffUtc).Add(MatchLifecycleRules.LiveDuration);
+
+    private bool ShowActualScore =>
+        EffectiveStatus != MatchStatus.Scheduled || (IsLivePeriod && Match.HomeScore.HasValue);
+
+    private string DisplayStatusLabel => EffectiveStatus switch
+    {
+        MatchStatus.InProgress => "Na żywo",
+        MatchStatus.Finished   => "Zakończony",
+        MatchStatus.Cancelled  => "Odwołany",
+        _                      => "Zaplanowany"
+    };
+
+    private string DisplayStatusCss => EffectiveStatus.ToString().ToLowerInvariant();
+
     private string LiveMinute
     {
         get
         {
-            var elapsed = (int)(DateTime.UtcNow - Match.KickOffUtc).TotalMinutes;
+            var elapsed = (int)(DateTime.UtcNow - MatchLifecycleRules.EnsureUtc(Match.KickOffUtc)).TotalMinutes;
             if (elapsed <= 0)  return "0'";
             if (elapsed <= 45) return $"{elapsed}'";
             // przerwa trwa ~15 min (45–60 od kickoffa)
@@ -250,6 +287,12 @@
         _             => string.Empty
     };
 
+    private string GetPredictionStatus()
+    {
+        Enum.TryParse<MatchStatus>(Match.Status, out var stored);
+        return MatchLifecycleRules.GetPredictionStatus(stored, Match.KickOffUtc);
+    }
+
     private string StatusLabel => Match.Status switch
     {
         "Scheduled"  => "Zaplanowany",
@@ -259,12 +302,12 @@
         _            => Match.Status
     };
 
-    private (string Label, string Icon) PredictionStatusInfo => Match.PredictionStatus switch
+    private (string Label, string Icon) PredictionStatusInfo => GetPredictionStatus() switch
     {
         "Open"   => ("Otwarte",     "🟢"),
         "Locked" => ("Zablokowane", "🔒"),
         "Scored" => ("Rozliczone",  "✅"),
-        _        => (Match.PredictionStatus, "")
+        _        => (GetPredictionStatus(), "")
     };
 
     private string PredictionStatusLabel => PredictionStatusInfo.Label;

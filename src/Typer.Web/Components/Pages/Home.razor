@@ -1,5 +1,4 @@
 ﻿@page "/"
-@rendermode InteractiveServer
 @using Typer.Application.Matches.DTOs
 @using Typer.Application.Rankings.DTOs
 @using Typer.Application.UserProfile.DTOs
@@ -128,29 +127,31 @@
             {
                 @foreach (var m in _recent)
                 {
-                    <div class="result-row">
-                        <div class="result-row__teams">
+                    <div class="recent-result">
+                        <div class="recent-result__team recent-result__team--home">
                             @if (!string.IsNullOrEmpty(m.HomeTeamFlagUrl))
                             {
-                                <img src="@m.HomeTeamFlagUrl" alt="" class="result-row__flag" />
+                                <img src="@m.HomeTeamFlagUrl" alt="" class="recent-result__flag" />
                             }
-                            <span class="result-row__name">@m.HomeTeamName</span>
-                            <span class="result-row__score">@m.HomeScore – @m.AwayScore</span>
-                            <span class="result-row__name">@m.AwayTeamName</span>
+                            <span class="recent-result__name">@m.HomeTeamName</span>
+                        </div>
+                        <span class="recent-result__score">@m.HomeScore – @m.AwayScore</span>
+                        <div class="recent-result__team recent-result__team--away">
+                            <span class="recent-result__name">@m.AwayTeamName</span>
                             @if (!string.IsNullOrEmpty(m.AwayTeamFlagUrl))
                             {
-                                <img src="@m.AwayTeamFlagUrl" alt="" class="result-row__flag" />
+                                <img src="@m.AwayTeamFlagUrl" alt="" class="recent-result__flag" />
                             }
                         </div>
                         @if (_isAuthenticated && m.PointsAwarded.HasValue)
                         {
-                            <span class="result-row__pts result-row__pts--@PtsClass(m.PointsAwarded.Value)">
+                            <span class="recent-result__pts recent-result__pts--@PtsClass(m.PointsAwarded.Value)">
                                 +@m.PointsAwarded pkt
                             </span>
                         }
                         else if (_isAuthenticated && m.PredictedHomeScore.HasValue)
                         {
-                            <span class="result-row__pred">
+                            <span class="recent-result__pred">
                                 Typ: @m.PredictedHomeScore–@m.PredictedAwayScore
                             </span>
                         }
@@ -180,7 +181,7 @@
             {
                 <p class="dash-empty">
                     Nie wybrałeś jeszcze reprezentacji.<br />
-                    <a href="/reprezentacje">Wybierz teraz →</a>
+                    <a href="/profil">Wybierz teraz →</a>
                 </p>
             }
             else
@@ -203,7 +204,7 @@
                         else
                         {
                             <div class="profile-card__player profile-card__player--empty">
-                                <a href="/zawodnicy">Wybierz zawodnika →</a>
+                                <a href="/profil">Wybierz zawodnika →</a>
                             </div>
                         }
                         <div class="profile-card__points">
@@ -212,8 +213,7 @@
                     </div>
                 </div>
                 <div class="profile-links">
-                    <a href="/reprezentacje">Zmień reprezentację</a>
-                    <a href="/zawodnicy">Zmień zawodnika</a>
+                    <a href="/profil">Edytuj profil →</a>
                 </div>
             }
         </div>

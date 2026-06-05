@@ -98,6 +98,7 @@ public class UserProfileService : IUserProfileService
             profile.SelectedTeamId,
             profile.SelectedTeam?.Name,
             profile.SelectedTeam?.FlagUrl,
+            profile.SelectedPlayerId,
             playerName,
             profile.SelectedPlayer?.JerseyNumber,
             history);

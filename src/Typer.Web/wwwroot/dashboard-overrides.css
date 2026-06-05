@@ -1,0 +1,105 @@
+/* Panel „Ostatnie wyniki” — style globalne (ładują się po scoped CSS) */
+
+.dash-widget--recent .dash-widget__body {
+    align-items: stretch;
+}
+
+.dash-widget--recent .recent-result {
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 6px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.85rem;
+}
+
+.dash-widget--recent .recent-result:last-child {
+    border-bottom: none;
+}
+
+.dash-widget--recent .recent-result__team {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+}
+
+.dash-widget--recent .recent-result__team--home {
+    grid-column: 1;
+    justify-self: end;
+    justify-content: flex-end;
+}
+
+.dash-widget--recent .recent-result__score {
+    grid-column: 2;
+    justify-self: center;
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: #111827;
+    white-space: nowrap;
+    padding: 0 4px;
+}
+
+.dash-widget--recent .recent-result__team--away {
+    grid-column: 3;
+    justify-self: start;
+    justify-content: flex-start;
+}
+
+.dash-widget--recent .recent-result__flag {
+    width: 18px;
+    height: 13px;
+    object-fit: cover;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.dash-widget--recent .recent-result__name {
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.dash-widget--recent .recent-result__pts,
+.dash-widget--recent .recent-result__pred {
+    grid-column: 1 / -1;
+    justify-self: center;
+}
+
+.dash-widget--recent .recent-result__pts {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.dash-widget--recent .recent-result__pts--high { background: #dcfce7; color: #15803d; }
+.dash-widget--recent .recent-result__pts--mid  { background: #fef9c3; color: #854d0e; }
+.dash-widget--recent .recent-result__pts--low  { background: #fee2e2; color: #b91c1c; }
+
+.dash-widget--recent .recent-result__pred {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+
+/* Desktop: punkty w tej samej linii, po prawej */
+@media (min-width: 769px) {
+    .dash-widget--recent .recent-result {
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    }
+
+    .dash-widget--recent .recent-result__pts,
+    .dash-widget--recent .recent-result__pred {
+        grid-column: 4;
+        grid-row: 1;
+    }
+}

@@ -1,5 +1,6 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿@using static Microsoft.AspNetCore.Components.Web.RenderMode
+<!DOCTYPE html>
+<html lang="pl">
 
 <head>
     <meta charset="utf-8" />
@@ -8,86 +9,14 @@
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="auth.css" />
     <link rel="stylesheet" href="Typer.Web.styles.css" />
-    <style>
-        /* Header */
-        .site-header { background:#0f1117; border-bottom:1px solid rgba(255,255,255,.08); position:sticky; top:0; z-index:100; }
-        .site-header__inner { max-width:1200px; margin:0 auto; padding:0 28px; height:60px; display:flex; align-items:center; }
-        .site-logo { display:flex; align-items:center; gap:7px; text-decoration:none; flex-shrink:0; margin-right:40px; }
-        .site-logo__icon { font-size:1.25rem; }
-        .site-logo__text { font-size:1.1rem; font-weight:700; color:#fff; letter-spacing:.3px; }
-        .site-nav { display:flex; align-items:center; gap:6px; flex:1; }
-        .site-header__auth { display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0; }
-        .site-header__username { font-size:.82rem; color:#9ca3af; font-weight:500; }
-
-        /* Nav buttons */
-        .site-nav__link,
-        .site-nav__link:link,
-        .site-nav__link:visited {
-            color: #e5e7eb !important;
-            text-decoration: none !important;
-            font-size: .875rem;
-            font-weight: 500;
-            padding: 7px 16px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,.2);
-            background: transparent;
-            transition: background .15s, border-color .15s;
-            white-space: nowrap;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            line-height: 1;
-        }
-        .site-nav__link:hover {
-            color: #fff !important;
-            border-color: rgba(255,255,255,.5);
-            background: rgba(255,255,255,.08);
-        }
-        .site-nav__link.active,
-        .site-nav__link.active:visited {
-            background: #fff !important;
-            color: #0f1117 !important;
-            border-color: #fff;
-            font-weight: 600;
-        }
-        .site-nav__link.active:hover { background:#f3f4f6 !important; color:#0f1117 !important; }
-
-        /* Auth — outline */
-        .site-nav__link--auth,
-        .site-nav__link--auth:link,
-        .site-nav__link--auth:visited {
-            background: transparent !important;
-            border: 1.5px solid rgba(255,255,255,.3) !important;
-            color: #e5e7eb !important;
-            padding: 6px 20px;
-            border-radius: 999px;
-            font-size: .85rem;
-            font-weight: 500;
-        }
-        .site-nav__link--auth:hover { border-color:rgba(255,255,255,.65) !important; color:#fff !important; background:rgba(255,255,255,.05) !important; }
-
-        /* Auth — filled blue */
-        .site-nav__link--cta,
-        .site-nav__link--cta:link,
-        .site-nav__link--cta:visited {
-            background: #3b82f6 !important;
-            color: #fff !important;
-            border: 1.5px solid #3b82f6 !important;
-            padding: 6px 20px;
-            border-radius: 999px;
-            font-size: .85rem;
-            font-weight: 600;
-        }
-        .site-nav__link--cta:hover { background:#2563eb !important; border-color:#2563eb !important; }
-
-        /* Site main */
-        .site-main { max-width:1100px; margin:0 auto; padding:28px 20px 60px; }
-    </style>
+    <link rel="stylesheet" href="dashboard-overrides.css" />
     <HeadOutlet />
 </head>
 
 <body>
-    <Routes />
+    <Routes @rendermode="@(new InteractiveServerRenderMode(prerender: false))" />
+    <script src="site-nav.js"></script>
+    <script src="profile-edit.js"></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 

@@ -1,0 +1,66 @@
+<header class="site-header">
+    <input type="checkbox"
+           id="site-nav-toggle"
+           class="site-header__toggle"
+           aria-hidden="true"
+           tabindex="-1" />
+
+    <div class="site-header__inner">
+        <a href="/" class="site-logo">
+            <span class="site-logo__icon">⚽</span>
+            <span class="site-logo__text">Typer</span>
+        </a>
+
+        <nav class="site-nav site-nav--desktop" aria-label="Główne menu">
+            <NavLink class="site-nav__link" href="/typowanie" Match="NavLinkMatch.Prefix">Typowanie</NavLink>
+            <NavLink class="site-nav__link" href="/ranking" Match="NavLinkMatch.Prefix">Ranking</NavLink>
+        </nav>
+
+        <div class="site-header__auth site-header__auth--desktop">
+            <AuthorizeView>
+                <Authorized>
+                    <NavLink class="site-nav__link site-nav__link--auth" href="/profil" Match="NavLinkMatch.Prefix">Profil</NavLink>
+                    <form method="post" action="/account/logout" style="display:inline">
+                        <button type="submit" class="site-nav__link site-nav__link--auth">Wyloguj</button>
+                    </form>
+                </Authorized>
+                <NotAuthorized>
+                    <NavLink class="site-nav__link site-nav__link--auth" href="/logowanie" Match="NavLinkMatch.Prefix">Zaloguj</NavLink>
+                    <NavLink class="site-nav__link site-nav__link--auth site-nav__link--cta" href="/rejestracja" Match="NavLinkMatch.Prefix">Rejestracja</NavLink>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+
+        <label for="site-nav-toggle"
+               class="site-header__burger"
+               aria-label="Otwórz menu"
+               aria-controls="site-header-drawer">
+            <span class="site-header__burger-line"></span>
+            <span class="site-header__burger-line"></span>
+            <span class="site-header__burger-line"></span>
+        </label>
+    </div>
+
+    <label for="site-nav-toggle" class="site-header__backdrop" aria-hidden="true"></label>
+
+    <div id="site-header-drawer" class="site-header__drawer">
+        <nav class="site-nav site-nav--drawer" aria-label="Menu mobilne">
+            <NavLink class="site-nav__link site-nav__link--drawer" href="/typowanie" Match="NavLinkMatch.Prefix">Typowanie</NavLink>
+            <NavLink class="site-nav__link site-nav__link--drawer" href="/ranking" Match="NavLinkMatch.Prefix">Ranking</NavLink>
+        </nav>
+        <div class="site-header__auth site-header__auth--drawer">
+            <AuthorizeView>
+                <Authorized>
+                    <NavLink class="site-nav__link site-nav__link--auth site-nav__link--drawer" href="/profil" Match="NavLinkMatch.Prefix">Profil</NavLink>
+                    <form method="post" action="/account/logout">
+                        <button type="submit" class="site-nav__link site-nav__link--auth site-nav__link--drawer">Wyloguj</button>
+                    </form>
+                </Authorized>
+                <NotAuthorized>
+                    <NavLink class="site-nav__link site-nav__link--auth site-nav__link--drawer" href="/logowanie" Match="NavLinkMatch.Prefix">Zaloguj</NavLink>
+                    <NavLink class="site-nav__link site-nav__link--auth site-nav__link--cta site-nav__link--drawer" href="/rejestracja" Match="NavLinkMatch.Prefix">Rejestracja</NavLink>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</header>

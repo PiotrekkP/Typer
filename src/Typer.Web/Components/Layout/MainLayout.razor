@@ -1,37 +1,6 @@
-﻿@inherits LayoutComponentBase
-@inject NavigationManager Nav
+@inherits LayoutComponentBase
 
-<header class="site-header">
-    <div class="site-header__inner">
-        <a href="/" class="site-logo">
-            <span class="site-logo__icon">⚽</span>
-            <span class="site-logo__text">Typer</span>
-        </a>
-
-        <nav class="site-nav">
-            <NavLink class="site-nav__link" href="/typowanie" Match="NavLinkMatch.Prefix">Typowanie</NavLink>
-            <NavLink class="site-nav__link" href="/reprezentacje" Match="NavLinkMatch.Prefix">Reprezentacje</NavLink>
-            <NavLink class="site-nav__link" href="/zawodnicy" Match="NavLinkMatch.Prefix">Zawodnicy</NavLink>
-            <NavLink class="site-nav__link" href="/ranking" Match="NavLinkMatch.Prefix">Ranking</NavLink>
-        </nav>
-
-        <div class="site-header__auth">
-            <AuthorizeView>
-                <Authorized>
-                    <span class="site-header__username">👤 @context.User.Identity?.Name</span>
-                    <form method="post" action="/account/logout" style="display:inline">
-                        <button type="submit" class="site-nav__link site-nav__link--auth">Wyloguj</button>
-                    </form>
-                </Authorized>
-                <NotAuthorized>
-                    <NavLink class="site-nav__link site-nav__link--auth" href="/logowanie" Match="NavLinkMatch.Prefix">Zaloguj</NavLink>
-                    <NavLink class="site-nav__link site-nav__link--auth site-nav__link--cta" href="/rejestracja" Match="NavLinkMatch.Prefix">Rejestracja</NavLink>
-                </NotAuthorized>
-            </AuthorizeView>
-        </div>
-    </div>
-</header>
-
+<SiteHeader />
 <main class="site-main">
     @Body
 </main>

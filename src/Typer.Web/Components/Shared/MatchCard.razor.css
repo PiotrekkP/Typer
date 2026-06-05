@@ -246,3 +246,92 @@
 .prediction-value--wrong   { color: #b91c1c; }
 
 .prediction-empty { color: #9ca3af; font-style: italic; font-size: 0.85rem; }
+
+/* ── Mobile ──────────────────────────────────────────────── */
+@media (max-width: 520px) {
+    .match-card {
+        padding: 12px 14px;
+    }
+
+    .match-body {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .match-team {
+        justify-content: center !important;
+        flex: unset;
+    }
+
+    .match-team--home .match-team__name,
+    .match-team--away .match-team__name {
+        text-align: center;
+        order: unset;
+        font-size: 0.95rem;
+    }
+
+    .match-team--home .match-team__flag {
+        order: unset;
+    }
+
+    .match-score {
+        min-width: unset;
+        padding: 4px 0;
+    }
+
+    .match-score__actual {
+        font-size: 1.75rem;
+    }
+
+    .match-scorers {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .match-scorers__side--home,
+    .match-scorers__side--away {
+        align-items: flex-start;
+    }
+
+    .match-scorers__side--home .goal-entry {
+        flex-direction: row;
+    }
+
+    .prediction-header {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .points-summary {
+        margin-left: 0;
+        width: 100%;
+        align-items: flex-start;
+    }
+
+    .points-breakdown {
+        justify-content: flex-start;
+    }
+
+    .match-prediction__inputs {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .prediction-input {
+        width: 56px;
+        min-height: 44px;
+        font-size: 1.1rem;
+    }
+
+    .btn-predict {
+        min-height: 44px;
+        padding: 10px 20px;
+        flex: 1;
+        max-width: 140px;
+    }
+
+    .match-prediction__result {
+        flex-wrap: wrap;
+    }
+}

@@ -25,6 +25,22 @@ public class PlayersController : ControllerBase
         return Ok(players);
     }
 
+    [HttpGet("mvps")]
+    [AllowAnonymous]
+    public async Task<ActionResult<IReadOnlyList<PlayerDto>>> GetMvps(CancellationToken cancellationToken)
+    {
+        var players = await _playerService.GetMvpsAsync(cancellationToken);
+        return Ok(players);
+    }
+
+    [HttpGet("search")]
+    [AllowAnonymous]
+    public async Task<ActionResult<IReadOnlyList<PlayerDto>>> Search([FromQuery] string q, CancellationToken cancellationToken)
+    {
+        var players = await _playerService.SearchAsync(q, cancellationToken);
+        return Ok(players);
+    }
+
     [HttpPost("select")]
     [Authorize]
     public async Task<IActionResult> Select(SelectPlayerRequest request, CancellationToken cancellationToken)

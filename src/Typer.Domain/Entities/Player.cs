@@ -11,6 +11,8 @@ public class Player : BaseEntity
 
     public string? Club { get; set; }
 
+    public bool IsMvp { get; set; }
+
     public Guid TeamId { get; set; }
     public Team Team { get; set; } = null!;
 }

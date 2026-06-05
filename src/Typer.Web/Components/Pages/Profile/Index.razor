@@ -1,11 +1,18 @@
 @page "/gracz/{UserId}"
-@rendermode InteractiveServer
+@page "/profil"
+@using Typer.Application.Players.DTOs
+@using Typer.Application.Players.Interfaces
+@using Typer.Application.Teams.DTOs
+@using Typer.Application.Teams.Interfaces
 @using Typer.Application.UserProfile.DTOs
 
 @inject IUserProfileService UserProfileService
+@inject ITeamService TeamService
+@inject IPlayerService PlayerService
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
 
-<PageTitle>Profil gracza — Typer</PageTitle>
+<PageTitle>@PageTitleText — Typer</PageTitle>
 
 @if (_loading)
 {
@@ -21,15 +28,33 @@ else if (_profile is null)
 else
 {
     <div class="profile-page">
+        @if (_isOwnProfile)
+        {
+            <input type="checkbox"
+                   id="profile-edit-team"
+                   class="profile-edit-toggle"
+                   aria-hidden="true"
+                   tabindex="-1" />
+            <input type="checkbox"
+                   id="profile-edit-player"
+                   class="profile-edit-toggle"
+                   aria-hidden="true"
+                   tabindex="-1" />
+        }
 
-        <!-- ══ KARTA PROFILU ══════════════════════════════════════ -->
         <div class="profile-card">
             <div class="profile-avatar" style="background: @AvatarColor">
                 <span class="profile-avatar__initials">@Initials</span>
             </div>
 
             <div class="profile-info">
-                <h1 class="profile-name">@_profile.DisplayName</h1>
+                <h1 class="profile-name">
+                    @_profile.DisplayName
+                    @if (_isOwnProfile)
+                    {
+                        <span class="profile-own-badge">Twój profil</span>
+                    }
+                </h1>
 
                 <div class="profile-rank">
                     <span class="rank-badge rank-badge--@MedalClass(_profile.Position)">
@@ -39,7 +64,6 @@ else
                     <span class="profile-total-pts">@_profile.TotalPoints pkt łącznie</span>
                 </div>
 
-                <!-- Statystyki punktowe -->
                 <div class="profile-stats">
                     <div class="stat-item">
                         <span class="stat-icon">⚽</span>
@@ -67,45 +91,197 @@ else
                 </div>
             </div>
 
-            <!-- Reprezentacja i zawodnik -->
             <div class="profile-selections">
-                @if (_profile.SelectedTeamId is not null)
-                {
+                <div class="selection-row">
                     <div class="selection-item">
-                        @if (!string.IsNullOrEmpty(_profile.SelectedTeamFlagUrl))
+                        @if (_profile.SelectedTeamId is not null && !string.IsNullOrEmpty(_profile.SelectedTeamFlagUrl))
                         {
                             <img src="@_profile.SelectedTeamFlagUrl"
                                  alt="@_profile.SelectedTeamName"
                                  class="selection-flag" />
                         }
+                        else if (_profile.SelectedTeamId is not null)
+                        {
+                            <div class="selection-flag selection-flag--placeholder">🏳</div>
+                        }
+                        else
+                        {
+                            <div class="selection-flag selection-flag--placeholder selection-flag--empty">—</div>
+                        }
                         <div class="selection-details">
                             <span class="selection-label">Reprezentacja</span>
-                            <span class="selection-value">@_profile.SelectedTeamName</span>
+                            <span class="selection-value">
+                                @(_profile.SelectedTeamName ?? (_isOwnProfile ? "Nie wybrano" : "—"))
+                            </span>
                         </div>
                     </div>
-                }
+                    @if (_isOwnProfile)
+                    {
+                        <label for="profile-edit-team"
+                               class="selection-edit-btn"
+                               title="Zmień reprezentację">
+                            ✏️
+                        </label>
+                    }
+                </div>
 
-                @if (_profile.SelectedPlayerName is not null)
-                {
+                <div class="selection-row">
                     <div class="selection-item">
-                        <div class="selection-jersey">
-                            @(_profile.SelectedPlayerNumber?.ToString() ?? "—")
-                        </div>
+                        @if (_profile.SelectedPlayerName is not null)
+                        {
+                            <div class="selection-jersey">
+                                @(_profile.SelectedPlayerNumber?.ToString() ?? "—")
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="selection-jersey selection-jersey--empty">—</div>
+                        }
                         <div class="selection-details">
                             <span class="selection-label">Zawodnik</span>
-                            <span class="selection-value">@_profile.SelectedPlayerName</span>
+                            <span class="selection-value">
+                                @(_profile.SelectedPlayerName ?? (_isOwnProfile ? "Nie wybrano" : "—"))
+                            </span>
                         </div>
                     </div>
-                }
+                    @if (_isOwnProfile)
+                    {
+                        <label for="profile-edit-player"
+                               class="selection-edit-btn"
+                               title="Zmień zawodnika">
+                            ✏️
+                        </label>
+                    }
+                </div>
 
-                @if (_profile.SelectedTeamId is null && _profile.SelectedPlayerName is null)
+                @if (!_isOwnProfile && _profile.SelectedTeamId is null && _profile.SelectedPlayerName is null)
                 {
-                    <p class="selection-empty">Gracz nie wybrał jeszcze reprezentacji.</p>
+                    <p class="selection-empty">Gracz nie wybrał jeszcze reprezentacji ani zawodnika.</p>
                 }
             </div>
         </div>
 
-        <!-- ══ HISTORIA TYPÓW ═════════════════════════════════════ -->
+        @if (_isOwnProfile)
+        {
+            <div class="selection-picker selection-picker--team">
+                    @if (!string.IsNullOrEmpty(_selectionMessage))
+                    {
+                        <div class="selection-picker__feedback selection-picker__feedback--@(_selectionError ? "error" : "success")">
+                            @_selectionMessage
+                        </div>
+                    }
+                    @if (_teams is null)
+                    {
+                        <p class="selection-picker__loading">Ładowanie reprezentacji…</p>
+                    }
+                    else
+                    {
+                        @foreach (var group in _teams.GroupBy(t => t.GroupName ?? "").OrderBy(g => g.Key))
+                        {
+                            <div class="selection-picker__group">
+                                <h4 class="selection-picker__group-title">Grupa @group.Key</h4>
+                                <div class="selection-picker__teams">
+                                    @foreach (var team in group)
+                                    {
+                                        var isSelected = _profile.SelectedTeamId == team.Id;
+                                        <button type="button"
+                                                class="selection-picker__team @(isSelected ? "selection-picker__team--selected" : "")"
+                                                @onclick="() => SelectTeamAsync(team)">
+                                            @if (!string.IsNullOrEmpty(team.FlagUrl))
+                                            {
+                                                <img src="@team.FlagUrl" alt="" class="selection-picker__team-flag" />
+                                            }
+                                            <span>@team.Name</span>
+                                            @if (isSelected) { <span class="selection-picker__check">✓</span> }
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+
+        @if (_isOwnProfile)
+        {
+            <div class="selection-picker selection-picker--player">
+                    @if (!string.IsNullOrEmpty(_selectionMessage))
+                    {
+                        <div class="selection-picker__feedback selection-picker__feedback--@(_selectionError ? "error" : "success")">
+                            @_selectionMessage
+                        </div>
+                    }
+
+                    <div class="selection-picker__search">
+                        <input type="text"
+                               class="selection-picker__search-input"
+                               placeholder="Szukaj zawodników…"
+                               @bind="_playerSearch"
+                               @bind:event="oninput"
+                               @bind:after="LoadDisplayedPlayersAsync" />
+                        @if (_playerSearch.Length > 0 && _playerSearch.Trim().Length < 2)
+                        {
+                            <span class="selection-picker__search-hint">Wpisz co najmniej 2 znaki</span>
+                        }
+                    </div>
+
+                    @if (_displayedPlayers is null)
+                    {
+                        <p class="selection-picker__loading">Ładowanie zawodników…</p>
+                    }
+                    else if (_displayedPlayers.Count == 0)
+                    {
+                        <p class="selection-picker__empty">
+                            @if (string.IsNullOrWhiteSpace(_playerSearch) || _playerSearch.Trim().Length < 2)
+                            {
+                                @:Brak zawodników oznaczonych jako MVP. Użyj wyszukiwarki.
+                            }
+                            else
+                            {
+                                @:Nie znaleziono zawodników dla „@_playerSearch.Trim()”.
+                            }
+                        </p>
+                    }
+                    else
+                    {
+                        @if (IsShowingMvpList)
+                        {
+                            <p class="selection-picker__section-label">Najlepsi zawodnicy (MVP)</p>
+                        }
+                        else
+                        {
+                            <p class="selection-picker__section-label">Wyniki wyszukiwania</p>
+                        }
+                        <div class="player-picker-grid">
+                            @foreach (var player in _displayedPlayers)
+                            {
+                                var isSelected = _profile.SelectedPlayerId == player.Id;
+                                <button type="button"
+                                        class="player-picker-card @(isSelected ? "player-picker-card--selected" : "")"
+                                        @onclick="() => SelectPlayerAsync(player)">
+                                    <span class="player-picker-card__number">#@player.JerseyNumber</span>
+                                    <div class="player-picker-card__info">
+                                        <span class="player-picker-card__name">@player.FirstName @player.LastName</span>
+                                        @if (!string.IsNullOrEmpty(player.TeamName))
+                                        {
+                                            <span class="player-picker-card__team">@player.TeamName</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(player.Position))
+                                        {
+                                            <span class="player-picker-card__position">@PositionLabel(player.Position)</span>
+                                        }
+                                    </div>
+                                    @if (isSelected)
+                                    {
+                                        <span class="player-picker-card__check">✓</span>
+                                    }
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+        }
+
         <div class="profile-history">
             <h2 class="history-title">Historia typów</h2>
 
@@ -179,18 +355,117 @@ else
 }
 
 @code {
-    [Parameter] public string UserId { get; set; } = default!;
+    [Parameter] public string? UserId { get; set; }
 
     private UserPublicProfileDto? _profile;
     private bool _loading = true;
+    private bool _isOwnProfile;
+    private string? _currentUserId;
+    private string? _effectiveUserId;
+
+    private IReadOnlyList<TeamDto>? _teams;
+    private IReadOnlyList<PlayerDto>? _displayedPlayers;
+    private IReadOnlyList<PlayerDto>? _mvpPlayers;
+    private string _playerSearch = "";
+    private string? _selectionMessage;
+    private bool _selectionError;
+
+    private string PageTitleText => _isOwnProfile ? "Profil" : "Profil gracza";
 
     protected override async Task OnInitializedAsync()
     {
-        _profile = await UserProfileService.GetPublicProfileAsync(UserId);
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        _effectiveUserId = UserId;
+        if (string.IsNullOrEmpty(_effectiveUserId))
+        {
+            if (_currentUserId is null)
+            {
+                Nav.NavigateTo("/logowanie", true);
+                return;
+            }
+            _effectiveUserId = _currentUserId;
+        }
+
+        _isOwnProfile = _currentUserId == _effectiveUserId;
+        await ReloadProfileAsync();
+        if (_isOwnProfile)
+        {
+            _mvpPlayers = await PlayerService.GetMvpsAsync();
+            _teams = await TeamService.GetAllAsync();
+            _displayedPlayers = _mvpPlayers;
+        }
         _loading = false;
     }
 
-    // ── Avatar ───────────────────────────────────────────────────
+    private bool IsShowingMvpList =>
+        string.IsNullOrWhiteSpace(_playerSearch) || _playerSearch.Trim().Length < 2;
+
+    private async Task ReloadProfileAsync()
+    {
+        if (_effectiveUserId is null) return;
+        _profile = await UserProfileService.GetPublicProfileAsync(_effectiveUserId);
+    }
+
+    private async Task LoadDisplayedPlayersAsync()
+    {
+        if (IsShowingMvpList)
+        {
+            _displayedPlayers = _mvpPlayers ?? await PlayerService.GetMvpsAsync();
+            _mvpPlayers ??= _displayedPlayers;
+        }
+        else
+        {
+            _displayedPlayers = await PlayerService.SearchAsync(_playerSearch.Trim());
+        }
+    }
+
+    private static string PositionLabel(string pos) => pos.ToUpperInvariant() switch
+    {
+        "GK" or "GOALKEEPER" or "BRAMKARZ" => "Bramkarz",
+        "DEF" or "DEFENDER" or "OBROŃCA" => "Obrońca",
+        "MID" or "MIDFIELDER" or "POMOCNIK" => "Pomocnik",
+        "FWD" or "FORWARD" or "NAPASTNIK" => "Napastnik",
+        _ => pos
+    };
+
+    private async Task SelectTeamAsync(TeamDto team)
+    {
+        if (_effectiveUserId is null) return;
+
+        var result = await TeamService.SelectTeamAsync(_effectiveUserId, new SelectTeamRequest(team.Id));
+        if (result.Succeeded)
+        {
+            _selectionMessage = $"Wybrano: {team.Name}";
+            _selectionError = false;
+            await ReloadProfileAsync();
+        }
+        else
+        {
+            _selectionMessage = result.Error ?? "Wystąpił błąd.";
+            _selectionError = true;
+        }
+    }
+
+    private async Task SelectPlayerAsync(PlayerDto player)
+    {
+        if (_effectiveUserId is null) return;
+
+        var result = await PlayerService.SelectPlayerAsync(_effectiveUserId, new SelectPlayerRequest(player.Id));
+        if (result.Succeeded)
+        {
+            _selectionMessage = $"Wybrano: {player.FirstName} {player.LastName}";
+            _selectionError = false;
+            await ReloadProfileAsync();
+        }
+        else
+        {
+            _selectionMessage = result.Error ?? "Wystąpił błąd.";
+            _selectionError = true;
+        }
+    }
+
     private string Initials => string.IsNullOrEmpty(_profile?.DisplayName)
         ? "?"
         : string.Concat(_profile.DisplayName
@@ -214,7 +489,6 @@ else
         }
     }
 
-    // ── Rankingi / CSS ───────────────────────────────────────────
     private static string MedalClass(int pos) => pos switch
     {
         1 => "gold", 2 => "silver", 3 => "bronze", _ => "other"

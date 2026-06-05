@@ -12,6 +12,7 @@ public class PlayerConfiguration : IEntityTypeConfiguration<Player>
         builder.Property(p => p.FirstName).HasMaxLength(100).IsRequired();
         builder.Property(p => p.LastName).HasMaxLength(100).IsRequired();
         builder.Property(p => p.Club).HasMaxLength(150);
+        builder.Property(p => p.IsMvp).HasDefaultValue(false);
 
         builder.HasOne(p => p.Team)
             .WithMany(t => t.Players)

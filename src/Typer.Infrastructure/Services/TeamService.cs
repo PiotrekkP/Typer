@@ -39,7 +39,6 @@ public class TeamService : ITeamService
         }
 
         profile.SelectedTeamId = request.TeamId;
-        profile.SelectedPlayerId = null;
         profile.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);

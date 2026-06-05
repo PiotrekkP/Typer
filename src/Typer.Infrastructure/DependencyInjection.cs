@@ -42,6 +42,7 @@ public static class DependencyInjection
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IMatchService, MatchService>();
+        services.AddScoped<IMatchLifecycleService, MatchLifecycleService>();
         services.AddScoped<ITeamService, TeamService>();
         services.AddScoped<IPlayerService, PlayerService>();
         services.AddScoped<IPredictionService, PredictionService>();
@@ -49,6 +50,13 @@ public static class DependencyInjection
         services.AddScoped<IScoringService, ScoringService>();
         services.AddScoped<IUserProfileService, UserProfileService>();
 
+        return services;
+    }
+
+    public static IServiceCollection AddMatchStatusBackgroundService(this IServiceCollection services)
+    {
+        services.AddHostedService<Background.MatchStatusBackgroundService>();
+        services.AddHostedService<Background.LiveScoringBackgroundService>();
         return services;
     }
 }

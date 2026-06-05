@@ -5,12 +5,15 @@ using Typer.Domain.Entities;
 using Typer.Infrastructure;
 using Typer.Infrastructure.Identity;
 using Typer.Infrastructure.Persistence;
+using Typer.Application.Matches.Interfaces;
+using Typer.Application.Scoring.Interfaces;
 using Typer.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddMatchStatusBackgroundService();
 builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.AddRazorComponents()
@@ -88,5 +91,14 @@ app.MapPost("/account/logout", async (SignInManager<ApplicationUser> signInManag
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+using (var scope = app.Services.CreateScope())
+{
+    var lifecycle = scope.ServiceProvider.GetRequiredService<IMatchLifecycleService>();
+    await lifecycle.AdvanceStatusesAsync();
+
+    var scoring = scope.ServiceProvider.GetRequiredService<IScoringService>();
+    await scoring.UpdateLiveScoresForInProgressMatchesAsync();
+}
 
 app.Run();

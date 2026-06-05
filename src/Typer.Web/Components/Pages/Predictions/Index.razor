@@ -1,6 +1,6 @@
 @page "/typowanie"
-@rendermode InteractiveServer
 @using System.Security.Claims
+@implements IAsyncDisposable
 @inject IMatchService MatchService
 @inject IPredictionService PredictionService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -55,6 +55,9 @@ else
     private bool _isAuthenticated;
     private string? _userId;
 
+    private PeriodicTimer? _refreshTimer;
+    private CancellationTokenSource? _refreshCts;
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -62,11 +65,47 @@ else
         _userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         await LoadRoundsAsync();
+        StartRefreshTimerIfNeeded();
     }
+
+    private void StartRefreshTimerIfNeeded()
+    {
+        if (_refreshTimer is not null) return;
+        if (_rounds is null || !HasLiveMatches()) return;
+
+        _refreshCts   = new CancellationTokenSource();
+        _refreshTimer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+        _ = RunRefreshLoopAsync(_refreshCts.Token);
+    }
+
+    private async Task RunRefreshLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (await _refreshTimer!.WaitForNextTickAsync(ct))
+            {
+                await LoadRoundsAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private bool HasLiveMatches() =>
+        _rounds?.Any(r => r.Matches.Any(m => m.Status == "InProgress")) ?? false;
 
     private async Task LoadRoundsAsync()
     {
         _rounds = await MatchService.GetRoundsWithMatchesAsync(userId: _userId);
+        StartRefreshTimerIfNeeded();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _refreshCts?.Cancel();
+        _refreshCts?.Dispose();
+        _refreshTimer?.Dispose();
+        await Task.CompletedTask;
     }
 
     private async Task HandlePredictionSubmit((Guid MatchId, int Home, int Away) args)
