@@ -12,9 +12,11 @@ RUN dotnet restore src/Typer.Api/Typer.Api.csproj
 
 # Copy source and publish
 COPY src/ src/
+ARG BUILD_VERSION=dev
 RUN dotnet publish src/Typer.Api/Typer.Api.csproj \
     -c Release \
     -o /app/publish \
+    -p:InformationalVersion=${BUILD_VERSION} \
     --no-restore
 
 # ── Runtime stage ────────────────────────────────────────────

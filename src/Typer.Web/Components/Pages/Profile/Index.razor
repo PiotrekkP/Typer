@@ -5,6 +5,7 @@
 @using Typer.Application.Teams.DTOs
 @using Typer.Application.Teams.Interfaces
 @using Typer.Application.UserProfile.DTOs
+@implements IDisposable
 
 @inject IUserProfileService UserProfileService
 @inject ITeamService TeamService
@@ -216,16 +217,15 @@ else
                         <input type="text"
                                class="selection-picker__search-input"
                                placeholder="Szukaj zawodników…"
-                               @bind="_playerSearch"
-                               @bind:event="oninput"
-                               @bind:after="LoadDisplayedPlayersAsync" />
+                               value="@_playerSearch"
+                               @oninput="OnPlayerSearchInput" />
                         @if (_playerSearch.Length > 0 && _playerSearch.Trim().Length < 2)
                         {
                             <span class="selection-picker__search-hint">Wpisz co najmniej 2 znaki</span>
                         }
                     </div>
 
-                    @if (_displayedPlayers is null)
+                    @if (_playersLoading || _displayedPlayers is null)
                     {
                         <p class="selection-picker__loading">Ładowanie zawodników…</p>
                     }
@@ -369,11 +369,17 @@ else
     private string _playerSearch = "";
     private string? _selectionMessage;
     private bool _selectionError;
+    private bool _ownProfileDataLoaded;
+    private bool _playersLoading;
+    private CancellationTokenSource? _searchDebounceCts;
+    private readonly SemaphoreSlim _playerLoadGate = new(1, 1);
 
     private string PageTitleText => _isOwnProfile ? "Profil" : "Profil gracza";
 
     protected override async Task OnInitializedAsync()
     {
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -390,13 +396,61 @@ else
 
         _isOwnProfile = _currentUserId == _effectiveUserId;
         await ReloadProfileAsync();
-        if (_isOwnProfile)
-        {
-            _mvpPlayers = await PlayerService.GetMvpsAsync();
-            _teams = await TeamService.GetAllAsync();
-            _displayedPlayers = _mvpPlayers;
-        }
+        await EnsureOwnProfileDataAsync();
         _loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !_isOwnProfile || _ownProfileDataLoaded)
+            return;
+
+        await EnsureOwnProfileDataAsync();
+        if (_ownProfileDataLoaded)
+            await InvokeAsync(StateHasChanged);
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        try
+        {
+            var authState = await task;
+            _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var wasOwnProfile = _isOwnProfile;
+            _isOwnProfile = _currentUserId == _effectiveUserId;
+
+            if (_isOwnProfile && !wasOwnProfile)
+            {
+                await EnsureOwnProfileDataAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // Ignore auth callback failures — user can refresh manually.
+        }
+    }
+
+    private async Task EnsureOwnProfileDataAsync()
+    {
+        if (!_isOwnProfile || _ownProfileDataLoaded)
+            return;
+
+        await _playerLoadGate.WaitAsync();
+        try
+        {
+            if (_ownProfileDataLoaded)
+                return;
+
+            _mvpPlayers = await PlayerService.GetMvpsAsync();
+            _teams ??= await TeamService.GetAllAsync();
+            _displayedPlayers = _mvpPlayers;
+            _ownProfileDataLoaded = true;
+        }
+        finally
+        {
+            _playerLoadGate.Release();
+        }
     }
 
     private bool IsShowingMvpList =>
@@ -408,17 +462,70 @@ else
         _profile = await UserProfileService.GetPublicProfileAsync(_effectiveUserId);
     }
 
-    private async Task LoadDisplayedPlayersAsync()
+    private async Task OnPlayerSearchInput(ChangeEventArgs e)
     {
-        if (IsShowingMvpList)
+        _playerSearch = e.Value?.ToString() ?? string.Empty;
+
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts?.Dispose();
+        _searchDebounceCts = new CancellationTokenSource();
+        var token = _searchDebounceCts.Token;
+
+        try
         {
-            _displayedPlayers = _mvpPlayers ?? await PlayerService.GetMvpsAsync();
-            _mvpPlayers ??= _displayedPlayers;
+            await Task.Delay(300, token);
+            await LoadDisplayedPlayersAsync(token);
+            await InvokeAsync(StateHasChanged);
         }
-        else
+        catch (OperationCanceledException)
         {
-            _displayedPlayers = await PlayerService.SearchAsync(_playerSearch.Trim());
+            // Expected when the user keeps typing.
         }
+    }
+
+    private async Task LoadDisplayedPlayersAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_isOwnProfile)
+            return;
+
+        await _playerLoadGate.WaitAsync(cancellationToken);
+        try
+        {
+            _playersLoading = true;
+            _selectionMessage = null;
+
+            if (IsShowingMvpList)
+            {
+                _displayedPlayers = _mvpPlayers ?? await PlayerService.GetMvpsAsync(cancellationToken);
+                _mvpPlayers ??= _displayedPlayers;
+            }
+            else
+            {
+                _displayedPlayers = await PlayerService.SearchAsync(_playerSearch.Trim(), cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            _selectionMessage = "Nie udało się wyszukać zawodników. Spróbuj ponownie.";
+            _selectionError = true;
+        }
+        finally
+        {
+            _playersLoading = false;
+            _playerLoadGate.Release();
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts?.Dispose();
+        _playerLoadGate.Dispose();
     }
 
     private static string PositionLabel(string pos) => pos.ToUpperInvariant() switch

@@ -5,17 +5,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
-    <link rel="stylesheet" href="app.css" />
-    <link rel="stylesheet" href="auth.css" />
-    <link rel="stylesheet" href="Typer.Web.styles.css" />
-    <link rel="stylesheet" href="dashboard-overrides.css" />
+    <link rel="stylesheet" href="@($"app.css?v={StaticAssets.Version}")" />
+    <link rel="stylesheet" href="@($"auth.css?v={StaticAssets.Version}")" />
+    <link rel="stylesheet" href="@($"Typer.Web.styles.css?v={StaticAssets.Version}")" />
+    <link rel="stylesheet" href="@($"dashboard-overrides.css?v={StaticAssets.Version}")" />
     <HeadOutlet />
 </head>
 
 <body>
     <Routes @rendermode="InteractiveServer" />
-    <script src="site-nav.js"></script>
-    <script src="profile-edit.js"></script>
+    <script src="@($"site-nav.js?v={StaticAssets.Version}")"></script>
+    <script src="@($"profile-edit.js?v={StaticAssets.Version}")"></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 

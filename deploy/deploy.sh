@@ -39,6 +39,10 @@ if [[ "$SKIP_PULL" == false ]]; then
 fi
 
 # ── Build images ──────────────────────────────────────────────
+BUILD_VERSION="$(git -C "$REPO_DIR" rev-parse --short HEAD 2>/dev/null || date -u +%Y%m%d%H%M)"
+export BUILD_VERSION
+info "Build version (asset cache bust): $BUILD_VERSION"
+
 info "Building Docker images..."
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build --no-cache
 
@@ -60,20 +64,25 @@ info "PostgreSQL is ready."
 # ── Run EF Core migrations ────────────────────────────────────
 if [[ "$SKIP_MIGRATE" == false ]]; then
   info "Applying EF Core migrations..."
-  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
-    exec -T api dotnet Typer.Api.dll migrate 2>/dev/null || \
+  DB_NAME="$(grep -E '^DB_NAME=' "$ENV_FILE" | cut -d= -f2-)"
+  DB_USER="$(grep -E '^DB_USER=' "$ENV_FILE" | cut -d= -f2-)"
+  DB_PASSWORD="$(grep -E '^DB_PASSWORD=' "$ENV_FILE" | cut -d= -f2-)"
+  NETWORK="$(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps -q postgres 2>/dev/null \
+    | head -1 | xargs -r docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}' \
+    | head -1)"
+
+  if [[ -z "$NETWORK" ]]; then
+    NETWORK="${COMPOSE_PROJECT_NAME:-typer}_typer-internal"
+  fi
+
   docker run --rm \
-    --network "$(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
-      ps -q postgres | xargs docker inspect -f '{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' | head -1)" \
-    --env-file "$ENV_FILE" \
-    -e "ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=$(grep DB_NAME "$ENV_FILE" | cut -d= -f2);Username=$(grep DB_USER "$ENV_FILE" | cut -d= -f2);Password=$(grep DB_PASSWORD "$ENV_FILE" | cut -d= -f2)" \
-    mcr.microsoft.com/dotnet/sdk:8.0 bash -c "
-      apt-get update -qq && apt-get install -y -qq git &&
-      git clone https://github.com/YOUR_USERNAME/Typer /tmp/typer &&
-      cd /tmp/typer &&
-      dotnet tool restore &&
-      dotnet ef database update --project src/Typer.Infrastructure --startup-project src/Typer.Api
-    " || warning "Migration step skipped — run manually if needed."
+    --network "$NETWORK" \
+    -v "$REPO_DIR:/app" \
+    -w /app \
+    -e "ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}" \
+    mcr.microsoft.com/dotnet/sdk:8.0 \
+    bash -c "dotnet tool restore && dotnet ef database update --project src/Typer.Infrastructure --startup-project src/Typer.Api" \
+    || warning "Migration step skipped — run manually if needed."
 fi
 
 # ── Health check ──────────────────────────────────────────────

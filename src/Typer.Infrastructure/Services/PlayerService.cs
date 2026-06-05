@@ -51,6 +51,7 @@ public class PlayerService : IPlayerService
             .Where(p =>
                 EF.Functions.ILike(p.FirstName, pattern) ||
                 EF.Functions.ILike(p.LastName, pattern) ||
+                EF.Functions.ILike(p.FirstName + " " + p.LastName, pattern) ||
                 (p.Club != null && EF.Functions.ILike(p.Club, pattern)))
             .OrderByDescending(p => p.IsMvp)
             .ThenBy(p => p.LastName)
@@ -61,13 +62,21 @@ public class PlayerService : IPlayerService
         if (results.Count > 0)
             return results.Select(Map).ToList();
 
-        var all = await PlayersQuery()
+        // Bounded fallback when diacritics differ between query and stored names.
+        var prefix = term.Length > 3 ? term[..3] : term;
+        var prefixPattern = $"%{prefix}%";
+
+        var candidates = await PlayersQuery()
+            .Where(p =>
+                EF.Functions.ILike(p.LastName, prefixPattern) ||
+                EF.Functions.ILike(p.FirstName, prefixPattern))
             .OrderByDescending(p => p.IsMvp)
             .ThenBy(p => p.LastName)
             .ThenBy(p => p.FirstName)
+            .Take(200)
             .ToListAsync(cancellationToken);
 
-        return all
+        return candidates
             .Where(p => MatchesNormalized(p, term))
             .Take(50)
             .Select(Map)
@@ -129,6 +138,6 @@ public class PlayerService : IPlayerService
             p.Position,
             p.Club,
             p.IsMvp,
-            p.Team.Name,
-            p.Team.FlagUrl);
+            p.Team?.Name,
+            p.Team?.FlagUrl);
 }

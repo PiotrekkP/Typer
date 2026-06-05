@@ -24,6 +24,8 @@ services:
     build:
       context: .
       dockerfile: src/Typer.Api/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
     image: typer-api:latest
     container_name: typer-api
     restart: unless-stopped
@@ -52,6 +54,8 @@ services:
     build:
       context: .
       dockerfile: src/Typer.Web/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
     image: typer-web:latest
     container_name: typer-web
     restart: unless-stopped
