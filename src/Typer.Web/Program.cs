@@ -21,6 +21,8 @@ builder.Services.AddScoped<IUserSelectionEvents, UserSelectionEvents>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddHealthChecks();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -93,6 +95,8 @@ app.MapPost("/account/logout", async (SignInManager<ApplicationUser> signInManag
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
 {
