@@ -98,13 +98,34 @@ app.MapRazorComponents<App>()
 
 app.MapHealthChecks("/health");
 
-using (var scope = app.Services.CreateScope())
+app.Lifetime.ApplicationStarted.Register(() =>
 {
-    var lifecycle = scope.ServiceProvider.GetRequiredService<IMatchLifecycleService>();
-    await lifecycle.AdvanceStatusesAsync();
-
-    var scoring = scope.ServiceProvider.GetRequiredService<IScoringService>();
-    await scoring.UpdateLiveScoresForInProgressMatchesAsync();
-}
+    _ = RunStartupJobsAsync(app.Services);
+});
 
 app.Run();
+
+static async Task RunStartupJobsAsync(IServiceProvider services)
+{
+    try
+    {
+        await using var scope = services.CreateAsyncScope();
+        var logger = scope.ServiceProvider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Startup");
+
+        var lifecycle = scope.ServiceProvider.GetRequiredService<IMatchLifecycleService>();
+        await lifecycle.AdvanceStatusesAsync();
+
+        var scoring = scope.ServiceProvider.GetRequiredService<IScoringService>();
+        await scoring.UpdateLiveScoresForInProgressMatchesAsync();
+    }
+    catch (Exception ex)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var logger = scope.ServiceProvider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Startup");
+        logger.LogError(ex, "Startup warm-up failed — aplikacja działa dalej.");
+    }
+}

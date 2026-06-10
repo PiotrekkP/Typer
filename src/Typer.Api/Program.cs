@@ -70,10 +70,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Typer API v1"));
 }
-else
-{
-    app.UseHttpsRedirection();
-}
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
