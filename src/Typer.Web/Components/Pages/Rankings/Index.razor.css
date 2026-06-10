@@ -151,8 +151,8 @@
 .col-pts--sub th { font-size: 0.7rem; }
 
 /* ── Flaga w tabeli ───────────────────────────────────────── */
-.col-team {
-    display: flex;
+.col-team__inner {
+    display: inline-flex;
     align-items: center;
     gap: 8px;
     white-space: nowrap;

@@ -70,11 +70,13 @@
                                 <a href="/gracz/@entry.UserId" class="player-link">@entry.DisplayName</a>
                             </td>
                             <td class="col-team">
-                                @if (!string.IsNullOrEmpty(entry.TeamFlagUrl))
-                                {
-                                    <img src="@entry.TeamFlagUrl" alt="@entry.TeamName" class="table-flag" />
-                                }
-                                <span>@(entry.TeamName ?? "—")</span>
+                                <span class="col-team__inner">
+                                    @if (!string.IsNullOrEmpty(entry.TeamFlagUrl))
+                                    {
+                                        <img src="@entry.TeamFlagUrl" alt="@entry.TeamName" class="table-flag" />
+                                    }
+                                    <span>@(entry.TeamName ?? "—")</span>
+                                </span>
                             </td>
                             <td class="col-player-name">@(entry.PlayerName ?? "—")</td>
                             <td class="col-pts total-pts">@entry.TotalPoints</td>
