@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Typer.Application.Auth.Interfaces;
 using Typer.Application.Common.Interfaces;
+using Typer.Application.Integrations.ApiFootball;
 using Typer.Application.Matches.Interfaces;
 using Typer.Application.Players.Interfaces;
 using Typer.Application.Predictions.Interfaces;
@@ -13,6 +14,7 @@ using Typer.Application.Scoring.Interfaces;
 using Typer.Application.Teams.Interfaces;
 using Typer.Application.UserProfile.Interfaces;
 using Typer.Infrastructure.Identity;
+using Typer.Infrastructure.Integrations.ApiFootball;
 using Typer.Infrastructure.Options;
 using Typer.Infrastructure.Persistence;
 using Typer.Infrastructure.Services;
@@ -24,6 +26,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.Configure<ApiFootballOptions>(configuration.GetSection(ApiFootballOptions.SectionName));
 
         var connectionString = configuration.GetConnectionString("DefaultConnection");
 
@@ -54,6 +57,16 @@ public static class DependencyInjection
         services.AddScoped<IRankingService, RankingService>();
         services.AddScoped<IScoringService, ScoringService>();
         services.AddScoped<IUserProfileService, UserProfileService>();
+        services.AddScoped<ILiveResultsSyncService, LiveResultsSyncService>();
+
+        services.AddHttpClient<IApiFootballClient, ApiFootballClient>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApiFootballOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            if (!string.IsNullOrWhiteSpace(options.ApiKey))
+                client.DefaultRequestHeaders.TryAddWithoutValidation("x-apisports-key", options.ApiKey);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
 
         return services;
     }
@@ -62,6 +75,7 @@ public static class DependencyInjection
     {
         services.AddHostedService<Background.MatchStatusBackgroundService>();
         services.AddHostedService<Background.LiveScoringBackgroundService>();
+        services.AddHostedService<Background.LiveResultsBackgroundService>();
         return services;
     }
 }

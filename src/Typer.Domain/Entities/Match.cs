@@ -23,6 +23,9 @@ public class Match : BaseEntity
     public int? HomeScore { get; set; }
     public int? AwayScore { get; set; }
 
+    /// <summary>Identyfikator meczu w API-Football (fixtures.id) do synchronizacji live.</summary>
+    public int? ApiFootballFixtureId { get; set; }
+
     public ICollection<Prediction> Predictions { get; set; } = [];
     public ICollection<GoalScorer> GoalScorers { get; set; } = [];
 }

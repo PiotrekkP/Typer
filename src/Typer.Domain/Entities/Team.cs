@@ -9,6 +9,9 @@ public class Team : BaseEntity
     public string? FlagUrl { get; set; }
     public string? GroupName { get; set; }
 
+    /// <summary>Identyfikator drużyny w API-Football (teams.id).</summary>
+    public int? ApiFootballTeamId { get; set; }
+
     public ICollection<Player> Players { get; set; } = [];
     public ICollection<Match> HomeMatches { get; set; } = [];
     public ICollection<Match> AwayMatches { get; set; } = [];

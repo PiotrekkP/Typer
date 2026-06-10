@@ -207,6 +207,9 @@ namespace Typer.Infrastructure.Persistence.Migrations
                     b.Property<int?>("AwayScore")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("ApiFootballFixtureId")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("AwayTeamId")
                         .HasColumnType("uuid");
 
@@ -486,6 +489,9 @@ namespace Typer.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("GroupName")
                         .HasColumnType("text");
+
+                    b.Property<int?>("ApiFootballTeamId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()

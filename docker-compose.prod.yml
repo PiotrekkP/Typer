@@ -69,6 +69,9 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-Typer.Api}
       Jwt__Audience: ${JWT_AUDIENCE:-Typer.Client}
       ApiBaseUrl: http://api:8080
+      ApiFootball__Enabled: ${API_FOOTBALL_ENABLED:-false}
+      ApiFootball__ApiKey: ${API_FOOTBALL_API_KEY:-}
+      ApiFootball__PollIntervalMinutes: 5
       ASPNETCORE_ENVIRONMENT: Production
     networks:
       - typer-internal
