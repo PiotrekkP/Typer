@@ -1,7 +1,23 @@
-﻿<!DOCTYPE html>
+﻿@inject IConfiguration Configuration
+
+<!DOCTYPE html>
 <html lang="pl">
 
 <head>
+    @{
+        var gaId = Configuration["GoogleAnalytics:MeasurementId"];
+    }
+    @if (!string.IsNullOrWhiteSpace(gaId))
+    {
+        <!-- Google tag (gtag.js) -->
+        <script async src="@($"https://www.googletagmanager.com/gtag/js?id={gaId}")"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '@gaId');
+        </script>
+    }
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
