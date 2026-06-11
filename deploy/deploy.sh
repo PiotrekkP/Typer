@@ -12,11 +12,13 @@ NGINX_CONF="$REPO_DIR/deploy/nginx/conf.d/typer.conf"
 
 SKIP_PULL=false
 SKIP_MIGRATE=false
+FULL_BUILD=false
 
 for arg in "$@"; do
   case $arg in
     --skip-pull)    SKIP_PULL=true ;;
     --skip-migrate) SKIP_MIGRATE=true ;;
+    --full-build)   FULL_BUILD=true ;;
   esac
 done
 
@@ -51,7 +53,11 @@ set +a
 SITE_DOMAIN="${SITE_DOMAIN:-}"
 if [[ -n "$SITE_DOMAIN" ]]; then
   info "Applying nginx domain: $SITE_DOMAIN"
-  sed -i "s/YOUR_DOMAIN/${SITE_DOMAIN}/g" "$NGINX_CONF"
+  if grep -q 'YOUR_DOMAIN' "$NGINX_CONF"; then
+    sed -i "s/YOUR_DOMAIN/${SITE_DOMAIN}/g" "$NGINX_CONF"
+  else
+    info "Nginx config already has domain applied — skipping sed."
+  fi
 else
   warning "SITE_DOMAIN not set in deploy/.env — nginx still uses YOUR_DOMAIN placeholder."
 fi
@@ -62,7 +68,9 @@ export BUILD_VERSION
 info "Build version (asset cache bust): $BUILD_VERSION"
 
 info "Building Docker images..."
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build --no-cache
+BUILD_ARGS=()
+[[ "$FULL_BUILD" == true ]] && BUILD_ARGS+=(--no-cache)
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build "${BUILD_ARGS[@]}"
 
 # ── Start / recreate containers ───────────────────────────────
 info "Starting PostgreSQL..."
