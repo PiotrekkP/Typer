@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Typer.Application;
 using Typer.Domain.Entities;
 using Typer.Infrastructure;
 using Typer.Infrastructure.Identity;
+using Typer.Infrastructure.Services;
 using Typer.Infrastructure.Persistence;
 using Typer.Application.Matches.Interfaces;
 using Typer.Application.Scoring.Interfaces;
@@ -16,6 +18,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMatchStatusBackgroundService();
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthorization();
 builder.Services.AddScoped<IUserSelectionEvents, UserSelectionEvents>();
 
 builder.Services.AddRazorComponents()
@@ -98,6 +101,12 @@ app.MapRazorComponents<App>()
 
 app.MapHealthChecks("/health");
 
+if (app.Environment.IsDevelopment())
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.MigrateAsync();
+}
+
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     _ = RunStartupJobsAsync(app.Services);
@@ -109,6 +118,8 @@ static async Task RunStartupJobsAsync(IServiceProvider services)
 {
     try
     {
+        await AdminRoleSeeder.EnsureAsync(services);
+
         await using var scope = services.CreateAsyncScope();
         var lifecycle = scope.ServiceProvider.GetRequiredService<IMatchLifecycleService>();
         await lifecycle.AdvanceStatusesAsync();

@@ -1,0 +1,135 @@
+@page "/admin/mecze"
+@attribute [Authorize(Roles = "Admin")]
+@using Typer.Application.Admin.DTOs
+@using Typer.Application.Admin.Interfaces
+@using Typer.Domain.Enums
+@implements IAsyncDisposable
+
+@inject IAdminMatchService AdminMatchService
+@inject NavigationManager Nav
+
+<PageTitle>Admin — mecze</PageTitle>
+
+<div class="admin-page">
+    <header class="admin-header">
+        <h1>Panel admina</h1>
+        <p class="admin-subtitle">Zarządzaj wynikami, strzelcami i minutą meczu.</p>
+    </header>
+
+    @if (_loading)
+    {
+        <p class="admin-loading">Ładowanie meczów…</p>
+    }
+    else if (_error is not null)
+    {
+        <p class="admin-error">@_error</p>
+    }
+    else
+    {
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Mecz</th>
+                        <th>Kickoff</th>
+                        <th>Status</th>
+                        <th>Wynik</th>
+                        <th>Minuta</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in _matches)
+                    {
+                        <tr>
+                            <td>
+                                <span class="admin-match-teams">@m.HomeTeamName – @m.AwayTeamName</span>
+                                @if (m.UseManualClock)
+                                {
+                                    <span class="admin-badge">ręczny zegar</span>
+                                }
+                            </td>
+                            <td>@m.KickOffUtc.ToLocalTime().ToString("dd.MM HH:mm")</td>
+                            <td><span class="admin-status admin-status--@m.Status.ToString().ToLowerInvariant()">@StatusLabel(m.Status)</span></td>
+                            <td>@ScoreLabel(m.HomeScore, m.AwayScore)</td>
+                            <td>
+                                @if (m.Status == MatchStatus.InProgress)
+                                {
+                                    <span class="admin-live">@m.LiveMinuteDisplay</span>
+                                }
+                            </td>
+                            <td>
+                                <a href="/admin/mecze/@m.Id" class="admin-link">Edytuj</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<AdminMatchListItemDto> _matches = [];
+    private bool _loading = true;
+    private string? _error;
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        _cts = new CancellationTokenSource();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+        _ = RunTimerAsync(_cts.Token);
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _matches = await AdminMatchService.GetMatchesAsync();
+            _error = null;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Błąd ładowania: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task RunTimerAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (await _timer!.WaitForNextTickAsync(ct))
+            {
+                if (_matches.Any(m => m.Status == MatchStatus.InProgress))
+                    await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private static string StatusLabel(MatchStatus status) => status switch
+    {
+        MatchStatus.InProgress => "Na żywo",
+        MatchStatus.Finished => "Zakończony",
+        MatchStatus.Cancelled => "Odwołany",
+        _ => "Zaplanowany"
+    };
+
+    private static string ScoreLabel(int? home, int? away) =>
+        home.HasValue && away.HasValue ? $"{home} – {away}" : "—";
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _timer?.Dispose();
+        await Task.CompletedTask;
+    }
+}

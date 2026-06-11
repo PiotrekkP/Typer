@@ -239,8 +239,10 @@
     private bool ShowLiveBadge => IsLivePeriod;
 
     private bool NeedsLiveTimer =>
-        EffectiveStatus is not (MatchStatus.Finished or MatchStatus.Cancelled)
-        && DateTime.UtcNow < MatchLifecycleRules.EnsureUtc(Match.KickOffUtc).Add(MatchLifecycleRules.LiveDuration);
+        EffectiveStatus is MatchStatus.InProgress
+        || (EffectiveStatus is not (MatchStatus.Finished or MatchStatus.Cancelled)
+            && !Match.UseManualClock
+            && DateTime.UtcNow < MatchLifecycleRules.EnsureUtc(Match.KickOffUtc).Add(MatchLifecycleRules.LiveDuration));
 
     private bool ShowActualScore =>
         EffectiveStatus != MatchStatus.Scheduled || (IsLivePeriod && Match.HomeScore.HasValue);
@@ -259,14 +261,17 @@
     {
         get
         {
-            var elapsed = (int)(DateTime.UtcNow - MatchLifecycleRules.EnsureUtc(Match.KickOffUtc)).TotalMinutes;
-            if (elapsed <= 0)  return "0'";
-            if (elapsed <= 45) return $"{elapsed}'";
-            // przerwa trwa ~15 min (45–60 od kickoffa)
-            if (elapsed <= 60) return "45+'";
-            // druga połowa
-            var half2 = elapsed - 15;
-            return half2 <= 90 ? $"{half2}'" : "90+'";
+            if (Enum.TryParse<MatchClockPhase>(Match.ClockPhase, out var phase))
+            {
+                return MatchClockRules.GetLiveMinuteDisplay(
+                    Match.UseManualClock,
+                    phase,
+                    Match.ClockStartedUtc,
+                    Match.ClockBaseMinute,
+                    Match.KickOffUtc);
+            }
+
+            return Match.LiveMinuteDisplay ?? "0'";
         }
     }
 

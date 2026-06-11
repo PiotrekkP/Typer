@@ -39,6 +39,7 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-Typer.Api}
       Jwt__Audience: ${JWT_AUDIENCE:-Typer.Client}
       Jwt__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES:-120}
+      Admin__AdminEmails__0: ${ADMIN_EMAIL:-piotr.paluszek1@gmail.com}
       ASPNETCORE_ENVIRONMENT: Production
     networks:
       - typer-internal
@@ -69,6 +70,7 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-Typer.Api}
       Jwt__Audience: ${JWT_AUDIENCE:-Typer.Client}
       ApiBaseUrl: http://api:8080
+      Admin__AdminEmails__0: ${ADMIN_EMAIL:-piotr.paluszek1@gmail.com}
       ASPNETCORE_ENVIRONMENT: Production
     networks:
       - typer-internal

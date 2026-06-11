@@ -68,33 +68,7 @@ public class MatchService : IMatchService
                 .Select(match =>
                 {
                     predictions.TryGetValue(match.Id, out var pred);
-                    var effectiveStatus = MatchLifecycleRules.GetEffectiveStatusName(match.Status, match.KickOffUtc);
-                    var predictionStatus = MatchLifecycleRules.GetPredictionStatus(match.Status, match.KickOffUtc);
-
-                    return new MatchDetailDto(
-                        match.Id,
-                        match.HomeTeamId,
-                        match.HomeTeam.Name,
-                        match.HomeTeam.Code,
-                        match.HomeTeam.FlagUrl,
-                        match.AwayTeamId,
-                        match.AwayTeam.Name,
-                        match.AwayTeam.Code,
-                        match.AwayTeam.FlagUrl,
-                        MatchLifecycleRules.EnsureUtc(match.KickOffUtc),
-                        effectiveStatus,
-                        match.HomeScore,
-                        match.AwayScore,
-                        match.GoalScorers
-                            .Select(g => new GoalScorerDto(g.PlayerName, g.IsHomeTeam, g.Minute, g.IsOwnGoal, g.IsPenalty))
-                            .ToList(),
-                        pred.Home,
-                        pred.Away,
-                        pred.Points,
-                        pred.Base,
-                        pred.TeamBonus,
-                        pred.PlayerGoal,
-                        predictionStatus);
+                    return MapMatchDetailDto(match, pred);
                 })
                 .ToList()
         )).ToList();
@@ -164,20 +138,52 @@ public class MatchService : IMatchService
         return matches.Select(match =>
         {
             predictions.TryGetValue(match.Id, out var pred);
-            var effectiveStatus = MatchLifecycleRules.GetEffectiveStatusName(match.Status, match.KickOffUtc);
-            var predictionStatus = MatchLifecycleRules.GetPredictionStatus(match.Status, match.KickOffUtc);
-
-            return new MatchDetailDto(
-                match.Id,
-                match.HomeTeamId, match.HomeTeam.Name, match.HomeTeam.Code, match.HomeTeam.FlagUrl,
-                match.AwayTeamId, match.AwayTeam.Name, match.AwayTeam.Code, match.AwayTeam.FlagUrl,
-                MatchLifecycleRules.EnsureUtc(match.KickOffUtc),
-                effectiveStatus,
-                match.HomeScore, match.AwayScore,
-                match.GoalScorers.Select(g => new GoalScorerDto(g.PlayerName, g.IsHomeTeam, g.Minute, g.IsOwnGoal, g.IsPenalty)).ToList(),
-                pred.Home, pred.Away, pred.Points, pred.Base, pred.TeamBonus, pred.PlayerGoal,
-                predictionStatus);
+            return MapMatchDetailDto(match, pred);
         }).ToList();
+    }
+
+    private static MatchDetailDto MapMatchDetailDto(
+        Typer.Domain.Entities.Match match,
+        (int? Home, int? Away, int? Points, int? Base, int? TeamBonus, int? PlayerGoal) pred)
+    {
+        var effectiveStatus = MatchLifecycleRules.GetEffectiveStatusName(match.Status, match.KickOffUtc);
+        var predictionStatus = MatchLifecycleRules.GetPredictionStatus(match.Status, match.KickOffUtc);
+        var liveMinute = MatchClockRules.GetLiveMinuteDisplay(
+            match.UseManualClock,
+            match.ClockPhase,
+            match.ClockStartedUtc,
+            match.ClockBaseMinute,
+            match.KickOffUtc);
+
+        return new MatchDetailDto(
+            match.Id,
+            match.HomeTeamId,
+            match.HomeTeam.Name,
+            match.HomeTeam.Code,
+            match.HomeTeam.FlagUrl,
+            match.AwayTeamId,
+            match.AwayTeam.Name,
+            match.AwayTeam.Code,
+            match.AwayTeam.FlagUrl,
+            MatchLifecycleRules.EnsureUtc(match.KickOffUtc),
+            effectiveStatus,
+            match.HomeScore,
+            match.AwayScore,
+            match.GoalScorers
+                .Select(g => new GoalScorerDto(g.Id, g.PlayerName, g.IsHomeTeam, g.Minute, g.IsOwnGoal, g.IsPenalty))
+                .ToList(),
+            pred.Home,
+            pred.Away,
+            pred.Points,
+            pred.Base,
+            pred.TeamBonus,
+            pred.PlayerGoal,
+            predictionStatus,
+            match.UseManualClock,
+            match.ClockPhase.ToString(),
+            match.ClockStartedUtc,
+            match.ClockBaseMinute,
+            liveMinute);
     }
 
     public async Task<Result> UpdateMatchResultAsync(

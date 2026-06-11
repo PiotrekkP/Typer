@@ -65,8 +65,8 @@ info "Building Docker images..."
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build --no-cache
 
 # ── Start / recreate containers ───────────────────────────────
-info "Starting services..."
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --remove-orphans
+info "Starting PostgreSQL..."
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d postgres
 
 # ── Wait for PostgreSQL ───────────────────────────────────────
 info "Waiting for PostgreSQL to be healthy..."
@@ -79,7 +79,7 @@ until docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
 done
 info "PostgreSQL is ready."
 
-# ── Run EF Core migrations ────────────────────────────────────
+# ── Run EF Core migrations (before api/web — new schema required) ─
 if [[ "$SKIP_MIGRATE" == false ]]; then
   info "Applying EF Core migrations..."
   DB_NAME="$(grep -E '^DB_NAME=' "$ENV_FILE" | cut -d= -f2-)"
@@ -100,8 +100,11 @@ if [[ "$SKIP_MIGRATE" == false ]]; then
     -e "ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}" \
     mcr.microsoft.com/dotnet/sdk:8.0 \
     bash -c "dotnet tool restore && dotnet ef database update --project src/Typer.Infrastructure --startup-project src/Typer.Api" \
-    || warning "Migration step skipped — run manually if needed."
+    || error "Migration failed — aborting deploy to protect the database."
 fi
+
+info "Starting all services..."
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --remove-orphans
 
 # ── Health check ──────────────────────────────────────────────
 info "Checking service health..."

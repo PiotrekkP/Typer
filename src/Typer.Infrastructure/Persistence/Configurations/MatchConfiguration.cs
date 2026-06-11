@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Typer.Domain.Entities;
+using Typer.Domain.Enums;
 
 namespace Typer.Infrastructure.Persistence.Configurations;
 
@@ -29,5 +30,9 @@ public class MatchConfiguration : IEntityTypeConfiguration<Match>
             .WithMany(r => r.Matches)
             .HasForeignKey(m => m.RoundId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Property(m => m.UseManualClock).HasDefaultValue(false);
+        builder.Property(m => m.ClockPhase).HasDefaultValue(MatchClockPhase.PreMatch);
+        builder.Property(m => m.ClockBaseMinute).HasDefaultValue(0);
     }
 }

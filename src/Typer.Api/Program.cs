@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using Typer.Application;
 using Typer.Infrastructure;
 using Typer.Infrastructure.Options;
+using Typer.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,5 +76,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
+
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    _ = AdminRoleSeeder.EnsureAsync(app.Services);
+});
 
 app.Run();

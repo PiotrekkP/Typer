@@ -23,6 +23,11 @@ public class Match : BaseEntity
     public int? HomeScore { get; set; }
     public int? AwayScore { get; set; }
 
+    public bool UseManualClock { get; set; }
+    public MatchClockPhase ClockPhase { get; set; } = MatchClockPhase.PreMatch;
+    public DateTime? ClockStartedUtc { get; set; }
+    public int ClockBaseMinute { get; set; }
+
     public ICollection<Prediction> Predictions { get; set; } = [];
     public ICollection<GoalScorer> GoalScorers { get; set; } = [];
 }

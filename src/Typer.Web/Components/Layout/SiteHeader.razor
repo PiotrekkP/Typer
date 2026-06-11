@@ -15,6 +15,9 @@
             <NavLink class="site-nav__link" href="/typowanie" Match="NavLinkMatch.Prefix">Typowanie</NavLink>
             <NavLink class="site-nav__link" href="/ranking" Match="NavLinkMatch.Prefix">Ranking</NavLink>
             <NavLink class="site-nav__link" href="/zasady" Match="NavLinkMatch.Prefix">Zasady</NavLink>
+            <AuthorizeView Roles="Admin">
+                <NavLink class="site-nav__link site-nav__link--admin" href="/admin/mecze" Match="NavLinkMatch.Prefix">Admin</NavLink>
+            </AuthorizeView>
         </nav>
 
         <div class="site-header__auth site-header__auth--desktop">
@@ -49,6 +52,9 @@
             <NavLink class="site-nav__link site-nav__link--drawer" href="/typowanie" Match="NavLinkMatch.Prefix">Typowanie</NavLink>
             <NavLink class="site-nav__link site-nav__link--drawer" href="/ranking" Match="NavLinkMatch.Prefix">Ranking</NavLink>
             <NavLink class="site-nav__link site-nav__link--drawer" href="/zasady" Match="NavLinkMatch.Prefix">Zasady</NavLink>
+            <AuthorizeView Roles="Admin">
+                <NavLink class="site-nav__link site-nav__link--admin site-nav__link--drawer" href="/admin/mecze" Match="NavLinkMatch.Prefix">Admin</NavLink>
+            </AuthorizeView>
         </nav>
         <div class="site-header__auth site-header__auth--drawer">
             <AuthorizeView>

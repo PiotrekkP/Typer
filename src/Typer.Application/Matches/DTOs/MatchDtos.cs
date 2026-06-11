@@ -3,6 +3,7 @@ using Typer.Domain.Enums;
 namespace Typer.Application.Matches.DTOs;
 
 public record GoalScorerDto(
+    Guid Id,
     string PlayerName,
     bool IsHomeTeam,
     int Minute,
@@ -35,7 +36,12 @@ public record MatchDetailDto(
     int? BasePoints,
     int? TeamBonusPoints,
     int? PlayerGoalPoints,
-    string PredictionStatus);
+    string PredictionStatus,
+    bool UseManualClock = false,
+    string ClockPhase = "PreMatch",
+    DateTime? ClockStartedUtc = null,
+    int ClockBaseMinute = 0,
+    string? LiveMinuteDisplay = null);
 
 /// <summary>
 /// Żądanie aktualizacji wyniku meczu. Status = 2 (Finished) automatycznie wyzwala

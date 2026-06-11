@@ -37,7 +37,7 @@ public class MatchesController : ControllerBase
     /// Gdy status = 2 (Finished), punkty za predykcje są przyznawane automatycznie.
     /// </summary>
     [HttpPatch("{matchId:guid}/result")]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateResult(
         Guid matchId,
         [FromBody] UpdateMatchResultRequest request,
@@ -56,7 +56,7 @@ public class MatchesController : ControllerBase
     /// Używane gdy np. strzelcy bramek zostali skorygowani po naliczeniu punktów.
     /// </summary>
     [HttpPost("{matchId:guid}/rescore")]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Rescore(Guid matchId, CancellationToken cancellationToken)
     {
         var result = await _scoringService.RescoreMatchAsync(matchId, cancellationToken);

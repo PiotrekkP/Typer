@@ -37,6 +37,10 @@ public class MatchLifecycleService : IMatchLifecycleService
         foreach (var match in toStart)
         {
             match.Status = MatchStatus.InProgress;
+            match.UseManualClock = true;
+            match.ClockPhase = MatchClockPhase.FirstHalf;
+            match.ClockBaseMinute = 0;
+            match.ClockStartedUtc = now;
             match.UpdatedAt = now;
             _logger.LogInformation("Mecz {MatchId} rozpoczęty — status InProgress.", match.Id);
         }
@@ -47,7 +51,9 @@ public class MatchLifecycleService : IMatchLifecycleService
         var liveEndsBefore = now - MatchLifecycleRules.LiveDuration;
 
         var toFinish = await context.Matches
-            .Where(m => m.Status == MatchStatus.InProgress && m.KickOffUtc <= liveEndsBefore)
+            .Where(m => m.Status == MatchStatus.InProgress
+                        && !m.UseManualClock
+                        && m.KickOffUtc <= liveEndsBefore)
             .ToListAsync(cancellationToken);
 
         foreach (var match in toFinish)

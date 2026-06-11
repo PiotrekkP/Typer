@@ -63,7 +63,7 @@ public class AuthService : IAuthService
 
         await context.SaveChangesAsync(cancellationToken);
 
-        return Result<AuthResponse>.Success(CreateAuthResponse(user));
+        return Result<AuthResponse>.Success(await CreateAuthResponseAsync(user));
     }
 
     public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -76,10 +76,10 @@ public class AuthService : IAuthService
         if (!passwordValid)
             return Result<AuthResponse>.Failure("Nieprawidłowy e-mail lub hasło.");
 
-        return Result<AuthResponse>.Success(CreateAuthResponse(user));
+        return Result<AuthResponse>.Success(await CreateAuthResponseAsync(user));
     }
 
-    private AuthResponse CreateAuthResponse(ApplicationUser user)
+    private async Task<AuthResponse> CreateAuthResponseAsync(ApplicationUser user)
     {
         var claims = new List<Claim>
         {
@@ -87,6 +87,9 @@ public class AuthService : IAuthService
             new(ClaimTypes.Email, user.Email ?? string.Empty),
             new(ClaimTypes.Name, user.DisplayName ?? user.Email ?? string.Empty)
         };
+
+        var roles = await _userManager.GetRolesAsync(user);
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Typer.Application.Admin.Interfaces;
 using Typer.Application.Auth.Interfaces;
 using Typer.Application.Common.Interfaces;
 using Typer.Application.Matches.Interfaces;
@@ -24,6 +25,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
 
         var connectionString = configuration.GetConnectionString("DefaultConnection");
 
@@ -55,6 +57,7 @@ public static class DependencyInjection
         services.AddScoped<IRankingService, RankingService>();
         services.AddScoped<IScoringService, ScoringService>();
         services.AddScoped<IUserProfileService, UserProfileService>();
+        services.AddScoped<IAdminMatchService, AdminMatchService>();
 
         return services;
     }

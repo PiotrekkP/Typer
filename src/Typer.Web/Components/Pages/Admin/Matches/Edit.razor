@@ -1,0 +1,378 @@
+@page "/admin/mecze/{MatchId:guid}"
+@attribute [Authorize(Roles = "Admin")]
+@using Typer.Application.Matches
+@using Typer.Application.Admin.DTOs
+@using Typer.Application.Admin.Interfaces
+@using Typer.Application.Matches.DTOs
+@using Typer.Application.Players.Interfaces
+@using Typer.Domain.Enums
+@implements IAsyncDisposable
+
+@inject IAdminMatchService AdminMatchService
+@inject IPlayerService PlayerService
+@inject NavigationManager Nav
+
+<PageTitle>Admin — edycja meczu</PageTitle>
+
+<div class="admin-page">
+    @if (_loading)
+    {
+        <p class="admin-loading">Ładowanie…</p>
+    }
+    else if (_match is null)
+    {
+        <p class="admin-error">Mecz nie istnieje.</p>
+        <a href="/admin/mecze" class="admin-link">← Wróć do listy</a>
+    }
+    else
+    {
+        <header class="admin-header">
+            <a href="/admin/mecze" class="admin-back">← Lista meczów</a>
+            <h1>@_match.HomeTeamName – @_match.AwayTeamName</h1>
+            <p class="admin-subtitle">
+                @_match.KickOffUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                · @StatusLabel(_match.Status)
+                @if (_match.Status == MatchStatus.InProgress)
+                {
+                    <span class="admin-live"> · @_liveMinute</span>
+                }
+            </p>
+        </header>
+
+        @if (_message is not null)
+        {
+            <p class="admin-message @(_messageError ? "admin-error" : "admin-success")">@_message</p>
+        }
+
+        <section class="admin-section">
+            <h2>Wynik</h2>
+            <div class="admin-form-row">
+                <label>Gospodarze</label>
+                <input type="number" min="0" max="99" @bind="_homeScore" class="admin-input admin-input--score" />
+                <span>:</span>
+                <label>Goście</label>
+                <input type="number" min="0" max="99" @bind="_awayScore" class="admin-input admin-input--score" />
+            </div>
+            <div class="admin-form-row">
+                <label>Status</label>
+                <select @bind="_status" class="admin-select">
+                    <option value="@MatchStatus.Scheduled">Zaplanowany</option>
+                    <option value="@MatchStatus.InProgress">Na żywo</option>
+                    <option value="@MatchStatus.Finished">Zakończony</option>
+                    <option value="@MatchStatus.Cancelled">Odwołany</option>
+                </select>
+            </div>
+            <div class="admin-actions">
+                <button class="admin-btn admin-btn--primary" disabled="@_busy" @onclick="SaveResult">Zapisz wynik</button>
+                <button class="admin-btn" disabled="@_busy" @onclick="Rescore">Przelicz punkty</button>
+            </div>
+        </section>
+
+        <section class="admin-section">
+            <h2>Zegar meczu</h2>
+            <p class="admin-hint">Faza: <strong>@ClockPhaseLabel(_match.ClockPhase)</strong> · @_liveMinute</p>
+            <div class="admin-actions admin-actions--wrap">
+                <button class="admin-btn" disabled="@_busy" @onclick="StartFirstHalf">1. połowa</button>
+                <button class="admin-btn" disabled="@_busy" @onclick="StartHalfTime">Przerwa</button>
+                <button class="admin-btn" disabled="@_busy" @onclick="StartSecondHalf">2. połowa</button>
+                <button class="admin-btn admin-btn--danger" disabled="@_busy" @onclick="FinishMatch">Koniec meczu</button>
+            </div>
+            <div class="admin-form-row admin-form-row--minute">
+                <label>Ustaw minutę</label>
+                <input type="number" min="0" max="120" @bind="_manualMinute" class="admin-input admin-input--score" />
+                <button class="admin-btn" disabled="@_busy" @onclick="SetMinute">Ustaw</button>
+            </div>
+        </section>
+
+        <section class="admin-section">
+            <h2>Strzelcy (@_match.GoalScorers.Count)</h2>
+
+            @if (_match.GoalScorers.Any())
+            {
+                <ul class="admin-scorers-list">
+                    @foreach (var g in _match.GoalScorers)
+                    {
+                        <li>
+                            <span>@g.Minute' — @(g.IsHomeTeam ? _match.HomeTeamName : _match.AwayTeamName): @g.PlayerName@GoalSuffix(g)</span>
+                            <button class="admin-btn admin-btn--small admin-btn--danger" disabled="@_busy" @onclick="() => RemoveScorer(g.Id)">Usuń</button>
+                        </li>
+                    }
+                </ul>
+            }
+
+            <h3>Dodaj strzelca</h3>
+            <div class="admin-form-row">
+                <label>Drużyna</label>
+                <select @bind="_scorerSide" class="admin-select">
+                    <option value="home">@_match.HomeTeamName</option>
+                    <option value="away">@_match.AwayTeamName</option>
+                </select>
+            </div>
+            <div class="admin-form-row">
+                <label>Zawodnik</label>
+                <select @bind="_scorerPlayerId" class="admin-select">
+                    <option value="">— wpisz ręcznie —</option>
+                    @foreach (var p in ScorerPlayers)
+                    {
+                        <option value="@p.Id.ToString()">@p.FirstName @p.LastName</option>
+                    }
+                </select>
+            </div>
+            @if (string.IsNullOrEmpty(_scorerPlayerId))
+            {
+                <div class="admin-form-row">
+                    <label>Nazwisko</label>
+                    <input type="text" @bind="_scorerName" class="admin-input" placeholder="np. Lewandowski" />
+                </div>
+            }
+            <div class="admin-form-row">
+                <label>Minuta</label>
+                <input type="number" min="0" max="120" @bind="_scorerMinute" class="admin-input admin-input--score" />
+            </div>
+            <div class="admin-form-row admin-checkboxes">
+                <label><input type="checkbox" @bind="_scorerOwnGoal" /> Samobój</label>
+                <label><input type="checkbox" @bind="_scorerPenalty" /> Karny</label>
+            </div>
+            <button class="admin-btn admin-btn--primary" disabled="@_busy" @onclick="AddScorer">Dodaj strzelca</button>
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid MatchId { get; set; }
+
+    private AdminMatchDetailDto? _match;
+    private IReadOnlyList<Typer.Application.Players.DTOs.PlayerDto> _homePlayers = [];
+    private IReadOnlyList<Typer.Application.Players.DTOs.PlayerDto> _awayPlayers = [];
+
+    private int _homeScore;
+    private int _awayScore;
+    private MatchStatus _status;
+    private int _manualMinute = 45;
+    private string _scorerSide = "home";
+    private string _scorerPlayerId = "";
+    private string _scorerName = "";
+    private int _scorerMinute = 1;
+    private bool _scorerOwnGoal;
+    private bool _scorerPenalty;
+
+    private bool _loading = true;
+    private bool _busy;
+    private string? _message;
+    private bool _messageError;
+    private string _liveMinute = "0'";
+
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _cts;
+
+    private IEnumerable<Typer.Application.Players.DTOs.PlayerDto> ScorerPlayers =>
+        _scorerSide == "home" ? _homePlayers : _awayPlayers;
+
+    private bool ScorerIsHome => _scorerSide == "home";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        _cts = new CancellationTokenSource();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        _ = RunTimerAsync(_cts.Token);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_loading)
+            await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _match = await AdminMatchService.GetMatchAsync(MatchId);
+            if (_match is not null)
+            {
+                _homeScore = _match.HomeScore ?? 0;
+                _awayScore = _match.AwayScore ?? 0;
+                _status = _match.Status;
+                _manualMinute = ParseMinute(_match.LiveMinuteDisplay);
+                UpdateLiveMinute();
+
+                _homePlayers = await PlayerService.GetByTeamAsync(_match.HomeTeamId);
+                _awayPlayers = await PlayerService.GetByTeamAsync(_match.AwayTeamId);
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void UpdateLiveMinute()
+    {
+        if (_match is null) return;
+        _liveMinute = MatchClockRules.GetLiveMinuteDisplay(
+            _match.UseManualClock,
+            _match.ClockPhase,
+            _match.ClockStartedUtc,
+            _match.ClockBaseMinute,
+            _match.KickOffUtc);
+    }
+
+    private async Task RunTimerAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (await _timer!.WaitForNextTickAsync(ct))
+            {
+                if (_match?.Status == MatchStatus.InProgress)
+                {
+                    UpdateLiveMinute();
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private async Task SaveResult()
+    {
+        await RunAction(async () =>
+        {
+            var result = await AdminMatchService.UpdateResultAsync(MatchId,
+                new UpdateMatchResultRequest(_homeScore, _awayScore, _status));
+            if (!result.Succeeded) throw new InvalidOperationException(result.Error);
+            await LoadAsync();
+            ShowMessage("Wynik zapisany.", false);
+        });
+    }
+
+    private async Task Rescore()
+    {
+        await RunAction(async () =>
+        {
+            var result = await AdminMatchService.RescoreAsync(MatchId);
+            if (!result.Succeeded) throw new InvalidOperationException(result.Error);
+            ShowMessage("Punkty przeliczone.", false);
+        });
+    }
+
+    private async Task StartFirstHalf() => await ClockAction(() => AdminMatchService.StartFirstHalfAsync(MatchId), "Rozpoczęto 1. połowę.");
+    private async Task StartHalfTime() => await ClockAction(() => AdminMatchService.StartHalfTimeAsync(MatchId), "Przerwa.");
+    private async Task StartSecondHalf() => await ClockAction(() => AdminMatchService.StartSecondHalfAsync(MatchId), "Rozpoczęto 2. połowę.");
+    private async Task FinishMatch() => await ClockAction(() => AdminMatchService.FinishMatchAsync(MatchId), "Mecz zakończony i rozliczony.");
+
+    private async Task SetMinute()
+    {
+        await RunAction(async () =>
+        {
+            var result = await AdminMatchService.SetMinuteAsync(MatchId, new SetMatchMinuteRequest(_manualMinute));
+            if (!result.Succeeded) throw new InvalidOperationException(result.Error);
+            await LoadAsync();
+            ShowMessage($"Ustawiono minutę {_manualMinute}.", false);
+        });
+    }
+
+    private async Task AddScorer()
+    {
+        await RunAction(async () =>
+        {
+            Guid? playerId = Guid.TryParse(_scorerPlayerId, out var id) ? id : null;
+            var name = playerId.HasValue ? "" : _scorerName;
+
+            var result = await AdminMatchService.AddGoalScorerAsync(MatchId,
+                new AddGoalScorerRequest(playerId, name, ScorerIsHome, _scorerMinute, _scorerOwnGoal, _scorerPenalty));
+
+            if (!result.Succeeded) throw new InvalidOperationException(result.Error);
+
+            _scorerName = "";
+            _scorerPlayerId = "";
+            await LoadAsync();
+            ShowMessage("Strzelec dodany.", false);
+        });
+    }
+
+    private async Task RemoveScorer(Guid goalScorerId)
+    {
+        await RunAction(async () =>
+        {
+            var result = await AdminMatchService.RemoveGoalScorerAsync(goalScorerId);
+            if (!result.Succeeded) throw new InvalidOperationException(result.Error);
+            await LoadAsync();
+            ShowMessage("Strzelec usunięty.", false);
+        });
+    }
+
+    private async Task ClockAction(Func<Task<Typer.Application.Common.Models.Result>> action, string success)
+    {
+        await RunAction(async () =>
+        {
+            var result = await action();
+            if (!result.Succeeded) throw new InvalidOperationException(result.Error);
+            await LoadAsync();
+            ShowMessage(success, false);
+        });
+    }
+
+    private async Task RunAction(Func<Task> action)
+    {
+        _busy = true;
+        _message = null;
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            ShowMessage(ex.Message, true);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void ShowMessage(string text, bool error)
+    {
+        _message = text;
+        _messageError = error;
+    }
+
+    private static string StatusLabel(MatchStatus status) => status switch
+    {
+        MatchStatus.InProgress => "Na żywo",
+        MatchStatus.Finished => "Zakończony",
+        MatchStatus.Cancelled => "Odwołany",
+        _ => "Zaplanowany"
+    };
+
+    private static string ClockPhaseLabel(MatchClockPhase phase) => phase switch
+    {
+        MatchClockPhase.FirstHalf => "1. połowa",
+        MatchClockPhase.HalfTime => "Przerwa",
+        MatchClockPhase.SecondHalf => "2. połowa",
+        MatchClockPhase.FullTime => "Koniec",
+        _ => "Przed meczem"
+    };
+
+    private static string GoalSuffix(AdminGoalScorerDto g) => (g.IsOwnGoal, g.IsPenalty) switch
+    {
+        (true, _) => " (sam.)",
+        (false, true) => " (k.)",
+        _ => ""
+    };
+
+    private static int ParseMinute(string display)
+    {
+        var digits = new string(display.TakeWhile(c => char.IsDigit(c)).ToArray());
+        return int.TryParse(digits, out var m) ? m : 0;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _timer?.Dispose();
+        await Task.CompletedTask;
+    }
+}
