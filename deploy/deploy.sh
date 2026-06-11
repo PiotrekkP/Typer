@@ -8,6 +8,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="$REPO_DIR/docker-compose.prod.yml"
 ENV_FILE="$REPO_DIR/deploy/.env"
+NGINX_CONF="$REPO_DIR/deploy/nginx/conf.d/typer.conf"
 
 SKIP_PULL=false
 SKIP_MIGRATE=false
@@ -35,7 +36,24 @@ info "Working directory: $REPO_DIR"
 # ── Pull latest code ──────────────────────────────────────────
 if [[ "$SKIP_PULL" == false ]]; then
   info "Pulling latest code from git..."
+  if ! git -C "$REPO_DIR" diff --quiet -- "$NGINX_CONF" 2>/dev/null; then
+    warning "Local nginx config differs from git — resetting before pull (domain re-applied from deploy/.env)."
+    git -C "$REPO_DIR" checkout -- "$NGINX_CONF"
+  fi
   git -C "$REPO_DIR" pull --ff-only
+fi
+
+# ── Nginx domain (from deploy/.env) ───────────────────────────
+set -a
+# shellcheck source=/dev/null
+source "$ENV_FILE"
+set +a
+SITE_DOMAIN="${SITE_DOMAIN:-}"
+if [[ -n "$SITE_DOMAIN" ]]; then
+  info "Applying nginx domain: $SITE_DOMAIN"
+  sed -i "s/YOUR_DOMAIN/${SITE_DOMAIN}/g" "$NGINX_CONF"
+else
+  warning "SITE_DOMAIN not set in deploy/.env — nginx still uses YOUR_DOMAIN placeholder."
 fi
 
 # ── Build images ──────────────────────────────────────────────
@@ -91,6 +109,6 @@ sleep 5
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
 
 info "Deployment complete! Services:"
-echo "  Web UI  →  https://YOUR_DOMAIN"
-echo "  API     →  https://YOUR_DOMAIN/api"
-echo "  Swagger →  https://YOUR_DOMAIN/swagger"
+echo "  Web UI  →  https://${SITE_DOMAIN:-YOUR_DOMAIN}"
+echo "  API     →  https://${SITE_DOMAIN:-YOUR_DOMAIN}/api"
+echo "  Swagger →  https://${SITE_DOMAIN:-YOUR_DOMAIN}/swagger"
