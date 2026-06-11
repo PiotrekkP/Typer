@@ -20,9 +20,17 @@ source "$ENV_FILE"
 set +a
 
 SITE_DOMAIN="${SITE_DOMAIN:-}"
-if [[ -n "$SITE_DOMAIN" ]] && grep -q 'YOUR_DOMAIN' "$NGINX_CONF"; then
+if [[ -z "$SITE_DOMAIN" ]]; then
+  error "Brak SITE_DOMAIN w deploy/.env — dodaj np. SITE_DOMAIN=cozatypy.pl"
+fi
+
+if grep -q 'YOUR_DOMAIN' "$NGINX_CONF"; then
   info "Ustawiam domenę nginx: $SITE_DOMAIN"
   sed -i "s/YOUR_DOMAIN/${SITE_DOMAIN}/g" "$NGINX_CONF"
+fi
+
+if grep -q 'YOUR_DOMAIN' "$NGINX_CONF"; then
+  error "Nginx nadal zawiera YOUR_DOMAIN"
 fi
 
 info "PostgreSQL..."

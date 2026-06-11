@@ -51,15 +51,17 @@ set -a
 source "$ENV_FILE"
 set +a
 SITE_DOMAIN="${SITE_DOMAIN:-}"
-if [[ -n "$SITE_DOMAIN" ]]; then
-  info "Applying nginx domain: $SITE_DOMAIN"
-  if grep -q 'YOUR_DOMAIN' "$NGINX_CONF"; then
-    sed -i "s/YOUR_DOMAIN/${SITE_DOMAIN}/g" "$NGINX_CONF"
-  else
-    info "Nginx config already has domain applied — skipping sed."
-  fi
-else
-  warning "SITE_DOMAIN not set in deploy/.env — nginx still uses YOUR_DOMAIN placeholder."
+if [[ -z "$SITE_DOMAIN" ]]; then
+  error "Brak SITE_DOMAIN w deploy/.env — dodaj np. SITE_DOMAIN=cozatypy.pl"
+fi
+
+info "Applying nginx domain: $SITE_DOMAIN"
+if grep -q 'YOUR_DOMAIN' "$NGINX_CONF"; then
+  sed -i "s/YOUR_DOMAIN/${SITE_DOMAIN}/g" "$NGINX_CONF"
+fi
+
+if grep -q 'YOUR_DOMAIN' "$NGINX_CONF"; then
+  error "Nginx nadal zawiera YOUR_DOMAIN — sprawdź deploy/.env i plik $NGINX_CONF"
 fi
 
 # ── Build images ──────────────────────────────────────────────
