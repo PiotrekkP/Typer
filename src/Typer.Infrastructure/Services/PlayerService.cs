@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Typer.Application.Common.Models;
+using Typer.Application.Matches;
+using Typer.Application.Matches.Interfaces;
 using Typer.Application.Players.DTOs;
 using Typer.Application.Players.Interfaces;
 using Typer.Domain.Entities;
@@ -12,10 +14,14 @@ namespace Typer.Infrastructure.Services;
 public class PlayerService : IPlayerService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
+    private readonly ISelectionLockService _selectionLock;
 
-    public PlayerService(IDbContextFactory<ApplicationDbContext> contextFactory)
+    public PlayerService(
+        IDbContextFactory<ApplicationDbContext> contextFactory,
+        ISelectionLockService selectionLock)
     {
         _contextFactory = contextFactory;
+        _selectionLock = selectionLock;
     }
 
     public async Task<IReadOnlyList<PlayerDto>> GetByTeamAsync(Guid teamId, CancellationToken cancellationToken = default)
@@ -111,6 +117,9 @@ public class PlayerService : IPlayerService
 
     public async Task<Result> SelectPlayerAsync(string userId, SelectPlayerRequest request, CancellationToken cancellationToken = default)
     {
+        if (!await _selectionLock.IsSelectionOpenAsync(cancellationToken))
+            return Result.Failure(SelectionLockRules.LockedMessage);
+
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
         var playerExists = await context.Players

@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Typer.Application.Common.Models;
+using Typer.Application.Matches;
+using Typer.Application.Matches.Interfaces;
 using Typer.Application.Teams.DTOs;
 using Typer.Application.Teams.Interfaces;
 using Typer.Infrastructure.Persistence;
@@ -9,10 +11,14 @@ namespace Typer.Infrastructure.Services;
 public class TeamService : ITeamService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
+    private readonly ISelectionLockService _selectionLock;
 
-    public TeamService(IDbContextFactory<ApplicationDbContext> contextFactory)
+    public TeamService(
+        IDbContextFactory<ApplicationDbContext> contextFactory,
+        ISelectionLockService selectionLock)
     {
         _contextFactory = contextFactory;
+        _selectionLock = selectionLock;
     }
 
     public async Task<IReadOnlyList<TeamDto>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -28,6 +34,9 @@ public class TeamService : ITeamService
 
     public async Task<Result> SelectTeamAsync(string userId, SelectTeamRequest request, CancellationToken cancellationToken = default)
     {
+        if (!await _selectionLock.IsSelectionOpenAsync(cancellationToken))
+            return Result.Failure(SelectionLockRules.LockedMessage);
+
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
         var teamExists = await context.Teams.AnyAsync(t => t.Id == request.TeamId, cancellationToken);

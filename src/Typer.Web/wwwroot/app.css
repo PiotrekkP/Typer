@@ -207,6 +207,20 @@ h1:focus { outline: none; }
     transform: translateY(-1px);
 }
 
+.selection-reminder__btn--locked {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #92400e !important;
+    box-shadow: none;
+    cursor: default;
+}
+
+.selection-reminder__btn--locked:hover {
+    background: #fef3c7;
+    box-shadow: none;
+    transform: none;
+}
+
 .site-main {
     max-width: 1100px;
     margin: 0 auto;

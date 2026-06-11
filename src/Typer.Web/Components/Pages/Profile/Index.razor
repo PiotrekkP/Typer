@@ -1,5 +1,6 @@
 @page "/gracz/{UserId}"
 @page "/profil"
+@using Typer.Application.Matches.Interfaces
 @using Typer.Application.Players.DTOs
 @using Typer.Application.Players.Interfaces
 @using Typer.Application.Teams.DTOs
@@ -14,6 +15,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject IUserSelectionEvents SelectionEvents
+@inject ISelectionLockService SelectionLockService
 
 <PageTitle>@PageTitleText — Typer</PageTitle>
 
@@ -37,12 +39,14 @@ else
                    id="profile-edit-team"
                    class="profile-edit-toggle"
                    aria-hidden="true"
-                   tabindex="-1" />
+                   tabindex="-1"
+                   disabled="@(!_selectionOpen)" />
             <input type="checkbox"
                    id="profile-edit-player"
                    class="profile-edit-toggle"
                    aria-hidden="true"
-                   tabindex="-1" />
+                   tabindex="-1"
+                   disabled="@(!_selectionOpen)" />
         }
 
         <div class="profile-card">
@@ -118,7 +122,7 @@ else
                             </span>
                         </div>
                     </div>
-                    @if (_isOwnProfile)
+                    @if (_isOwnProfile && _selectionOpen)
                     {
                         <label for="profile-edit-team"
                                class="selection-edit-btn"
@@ -147,7 +151,7 @@ else
                             </span>
                         </div>
                     </div>
-                    @if (_isOwnProfile)
+                    @if (_isOwnProfile && _selectionOpen)
                     {
                         <label for="profile-edit-player"
                                class="selection-edit-btn"
@@ -157,6 +161,17 @@ else
                     }
                 </div>
 
+                @if (_isOwnProfile && !_selectionOpen)
+                {
+                    <p class="selection-lock-notice">
+                        Wybór reprezentacji i zawodnika jest zablokowany od rozpoczęcia turnieju
+                        @if (_selectionLockUtc is not null)
+                        {
+                            <span>(@_selectionLockUtc.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm"))</span>
+                        }.
+                    </p>
+                }
+
                 @if (!_isOwnProfile && _profile.SelectedTeamId is null && _profile.SelectedPlayerName is null)
                 {
                     <p class="selection-empty">Gracz nie wybrał jeszcze reprezentacji ani zawodnika.</p>
@@ -164,7 +179,7 @@ else
             </div>
         </div>
 
-        @if (_isOwnProfile)
+        @if (_isOwnProfile && _selectionOpen)
         {
             <div class="selection-picker selection-picker--team">
                     @if (!string.IsNullOrEmpty(_selectionMessage))
@@ -205,7 +220,7 @@ else
                 </div>
             }
 
-        @if (_isOwnProfile)
+        @if (_isOwnProfile && _selectionOpen)
         {
             <div class="selection-picker selection-picker--player">
                     @if (!string.IsNullOrEmpty(_selectionMessage))
@@ -385,6 +400,8 @@ else
     private bool _playersLoading;
     private CancellationTokenSource? _searchDebounceCts;
     private readonly SemaphoreSlim _playerLoadGate = new(1, 1);
+    private bool _selectionOpen = true;
+    private DateTime? _selectionLockUtc;
     private string? _appliedEditQuery;
     private string? _resolvedUserId;
 
@@ -433,7 +450,7 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_isOwnProfile && !_loading && Edit is "team" or "player" && Edit != _appliedEditQuery)
+        if (_isOwnProfile && _selectionOpen && !_loading && Edit is "team" or "player" && Edit != _appliedEditQuery)
         {
             _appliedEditQuery = Edit;
             await JS.InvokeVoidAsync("typerOpenProfileEdit", Edit);
@@ -463,7 +480,13 @@ else
 
     private async Task EnsureOwnProfileDataAsync()
     {
-        if (!_isOwnProfile || _ownProfileDataLoaded)
+        if (!_isOwnProfile)
+            return;
+
+        _selectionOpen = await SelectionLockService.IsSelectionOpenAsync();
+        _selectionLockUtc = await SelectionLockService.GetSelectionLockUtcAsync();
+
+        if (!_selectionOpen || _ownProfileDataLoaded)
             return;
 
         await _playerLoadGate.WaitAsync();

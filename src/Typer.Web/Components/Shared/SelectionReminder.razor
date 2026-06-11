@@ -1,22 +1,34 @@
+@using Typer.Application.Matches.Interfaces
 @using Typer.Application.UserProfile.Interfaces
 @implements IDisposable
 
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IUserProfileService UserProfileService
+@inject ISelectionLockService SelectionLockService
 @inject NavigationManager Nav
 @inject IUserSelectionEvents SelectionEvents
 
-@if (_showBanner)
+@if (_showReminder)
 {
     <div class="selection-reminder">
-        <a href="/profil?edit=team" class="selection-reminder__btn">
-            Wybierz reprezentację i zawodnika
-        </a>
+        @if (_selectionOpen)
+        {
+            <a href="/profil?edit=team" class="selection-reminder__btn">
+                Wybierz reprezentację i zawodnika
+            </a>
+        }
+        else
+        {
+            <span class="selection-reminder__btn selection-reminder__btn--locked">
+                Nie wybrałeś reprezentacji ani zawodnika przed startem turnieju
+            </span>
+        }
     </div>
 }
 
 @code {
-    private bool _showBanner;
+    private bool _showReminder;
+    private bool _selectionOpen = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -51,12 +63,13 @@
 
         if (userId is null)
         {
-            _showBanner = false;
+            _showReminder = false;
             return;
         }
 
         var selection = await UserProfileService.GetSelectionAsync(userId);
-        _showBanner = selection is not null
+        _selectionOpen = await SelectionLockService.IsSelectionOpenAsync();
+        _showReminder = selection is not null
             && (selection.SelectedTeamId is null || selection.SelectedPlayerId is null);
     }
 

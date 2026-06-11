@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using Typer.Application.Matches.Interfaces
 @using Typer.Application.Matches.DTOs
 @using Typer.Application.Rankings.DTOs
 @using Typer.Application.UserProfile.DTOs
@@ -7,6 +8,7 @@
 @inject IUserProfileService UserProfileService
 @inject IPredictionService PredictionService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ISelectionLockService SelectionLockService
 
 <PageTitle>Typer — Liga typowania</PageTitle>
 
@@ -201,8 +203,15 @@
             else if (_selection.SelectedTeamId is null)
             {
                 <p class="dash-empty">
-                    Nie wybrałeś jeszcze reprezentacji.<br />
-                    <a href="/profil">Wybierz teraz →</a>
+                    @if (_selectionOpen)
+                    {
+                        @:Nie wybrałeś jeszcze reprezentacji.<br />
+                        <a href="/profil">Wybierz teraz →</a>
+                    }
+                    else
+                    {
+                        @:Nie wybrałeś reprezentacji przed startem turnieju.
+                    }
                 </p>
             }
             else
@@ -253,7 +262,14 @@
                             <div class="profile-split__photo profile-split__photo--placeholder">—</div>
                             <div class="profile-split__label">Zawodnik</div>
                             <div class="profile-split__name profile-split__name--empty">
-                                <a href="/profil">Wybierz zawodnika →</a>
+                                @if (_selectionOpen)
+                                {
+                                    <a href="/profil">Wybierz zawodnika →</a>
+                                }
+                                else
+                                {
+                                    @:Nie wybrano przed startem turnieju
+                                }
                             </div>
                         }
                     </div>
@@ -275,6 +291,7 @@
     private UserSelectionDto? _selection;
 
     private bool _isAuthenticated;
+    private bool _selectionOpen = true;
     private string? _userId;
     private bool _playerPhotoFailed;
 
@@ -307,9 +324,15 @@
     {
         _playerPhotoFailed = false;
         if (_userId is not null)
+        {
             _selection = await UserProfileService.GetSelectionAsync(_userId);
+            _selectionOpen = await SelectionLockService.IsSelectionOpenAsync();
+        }
         else
+        {
             _selection = new UserSelectionDto(null, null, null, null, null, null, null, null, 0, 0, 0);
+            _selectionOpen = true;
+        }
     }
 
     private void OnPlayerPhotoError()

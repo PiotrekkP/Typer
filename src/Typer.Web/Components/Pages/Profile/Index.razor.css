@@ -27,7 +27,16 @@
     padding: 60px 20px;
 }
 
-.profile-not-found a { color: #3b82f6; }
+.selection-lock-notice {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+}
 
 /* ══ KARTA PROFILU ═════════════════════════════════════════ */
 .profile-card {

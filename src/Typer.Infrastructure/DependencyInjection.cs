@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IMatchService, MatchService>();
         services.AddScoped<IMatchLifecycleService, MatchLifecycleService>();
+        services.AddScoped<ISelectionLockService, SelectionLockService>();
         services.AddScoped<ITeamService, TeamService>();
         services.AddScoped<IPlayerService, PlayerService>();
         services.AddScoped<IPredictionService, PredictionService>();
