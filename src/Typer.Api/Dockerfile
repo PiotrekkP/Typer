@@ -27,10 +27,7 @@ WORKDIR /app
 RUN addgroup --system typer && adduser --system --ingroup typer typer
 
 COPY --from=build /app/publish .
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && chown -R typer:typer /app
+RUN chown -R typer:typer /app
 
 USER typer
 
