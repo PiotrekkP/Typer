@@ -21,6 +21,8 @@ builder.Services.AddScoped<IUserSelectionEvents, UserSelectionEvents>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddHealthChecks();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -94,13 +96,32 @@ app.MapPost("/account/logout", async (SignInManager<ApplicationUser> signInManag
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-using (var scope = app.Services.CreateScope())
-{
-    var lifecycle = scope.ServiceProvider.GetRequiredService<IMatchLifecycleService>();
-    await lifecycle.AdvanceStatusesAsync();
+app.MapHealthChecks("/health");
 
-    var scoring = scope.ServiceProvider.GetRequiredService<IScoringService>();
-    await scoring.UpdateLiveScoresForInProgressMatchesAsync();
-}
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    _ = RunStartupJobsAsync(app.Services);
+});
 
 app.Run();
+
+static async Task RunStartupJobsAsync(IServiceProvider services)
+{
+    try
+    {
+        await using var scope = services.CreateAsyncScope();
+        var lifecycle = scope.ServiceProvider.GetRequiredService<IMatchLifecycleService>();
+        await lifecycle.AdvanceStatusesAsync();
+
+        var scoring = scope.ServiceProvider.GetRequiredService<IScoringService>();
+        await scoring.UpdateLiveScoresForInProgressMatchesAsync();
+    }
+    catch (Exception ex)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var logger = scope.ServiceProvider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Startup");
+        logger.LogError(ex, "Startup warm-up failed — aplikacja działa dalej.");
+    }
+}
