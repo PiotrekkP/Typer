@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Typer.Application.UserProfile.DTOs;
 using Typer.Application.UserProfile.Interfaces;
+using Typer.Domain.Enums;
 using Typer.Infrastructure.Persistence;
 
 namespace Typer.Infrastructure.Services;
@@ -64,7 +65,7 @@ public class UserProfileService : IUserProfileService
             .CountAsync(p => p.TotalPoints > profile.TotalPoints, cancellationToken) + 1;
 
         var history = await context.Predictions
-            .Where(p => p.UserId == userId && p.PointsAwarded.HasValue)
+            .Where(p => p.UserId == userId && p.Match.Status == MatchStatus.Finished)
             .Include(p => p.Match)
                 .ThenInclude(m => m.HomeTeam)
             .Include(p => p.Match)

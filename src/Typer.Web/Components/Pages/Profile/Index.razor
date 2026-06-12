@@ -311,7 +311,7 @@ else
 
             @if (_profile.PredictionHistory.Count == 0)
             {
-                <p class="history-empty">Brak rozliczonych typów.</p>
+                <p class="history-empty">Brak typów na zakończonych meczach.</p>
             }
             else
             {
@@ -368,7 +368,7 @@ else
                 </div>
 
                 <div class="history-summary">
-                    <span>Rozliczone mecze: <strong>@_profile.PredictionHistory.Count</strong></span>
+                    <span>Zakończonych meczów z typem: <strong>@_profile.PredictionHistory.Count</strong></span>
                     <span>Trafionych wyników: <strong>@_profile.PredictionHistory.Count(h => h.BasePoints is > 0)</strong></span>
                     <span>Dokładnych wyników: <strong>@_profile.PredictionHistory.Count(h => h.PointsAwarded >= 5)</strong></span>
                 </div>

@@ -237,7 +237,18 @@ public class ScoringService : IScoringService
         var deltaPlayer  = playerGoalBonus - (prediction.PlayerGoalPoints ?? 0);
 
         if (deltaEarned == 0 && deltaBase == 0 && deltaTeam == 0 && deltaPlayer == 0)
+        {
+            if (!prediction.PointsAwarded.HasValue)
+            {
+                prediction.PointsAwarded   = earned;
+                prediction.BasePoints      = basePoints;
+                prediction.TeamBonusPoints = teamBonus;
+                prediction.PlayerGoalPoints = playerGoalBonus;
+                prediction.UpdatedAt       = DateTime.UtcNow;
+            }
+
             return;
+        }
 
         prediction.PointsAwarded    = earned;
         prediction.BasePoints       = basePoints;
