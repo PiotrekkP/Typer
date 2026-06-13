@@ -29,6 +29,7 @@ public class RankingService : IRankingService
             .Include(p => p.SelectedPlayer)
             .OrderByDescending(p => p.TotalPoints)
             .ThenBy(p => p.DisplayName)
+            .ThenBy(p => p.UserId)
             .Select(p => new
             {
                 p.UserId,

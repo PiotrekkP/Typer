@@ -231,4 +231,10 @@ public class MatchService : IMatchService
 
         return Result.Success();
     }
+
+    public async Task<bool> HasInProgressMatchesAsync(CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context.Matches.AnyAsync(m => m.Status == MatchStatus.InProgress, cancellationToken);
+    }
 }

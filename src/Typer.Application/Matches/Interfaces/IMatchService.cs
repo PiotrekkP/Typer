@@ -27,4 +27,6 @@ public interface IMatchService
         int count = 5,
         string? userId = null,
         CancellationToken cancellationToken = default);
+
+    Task<bool> HasInProgressMatchesAsync(CancellationToken cancellationToken = default);
 }

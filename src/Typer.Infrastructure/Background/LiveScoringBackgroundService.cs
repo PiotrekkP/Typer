@@ -1,13 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Typer.Application.Scoring;
 using Typer.Application.Scoring.Interfaces;
 
 namespace Typer.Infrastructure.Background;
 
 public class LiveScoringBackgroundService : BackgroundService
 {
-    private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan Interval = LiveScoringRules.RefreshInterval;
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<LiveScoringBackgroundService> _logger;
