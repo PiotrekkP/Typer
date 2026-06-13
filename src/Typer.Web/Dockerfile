@@ -27,7 +27,7 @@ RUN addgroup --system typer && adduser --system --ingroup typer typer
 
 COPY --from=build /app/publish .
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl tzdata \
     && rm -rf /var/lib/apt/lists/* \
     && chown -R typer:typer /app
 

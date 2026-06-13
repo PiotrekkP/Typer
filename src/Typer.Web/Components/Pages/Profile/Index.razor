@@ -167,7 +167,7 @@ else
                         Wybór reprezentacji i zawodnika jest zablokowany od rozpoczęcia turnieju
                         @if (_selectionLockUtc is not null)
                         {
-                            <span>(@_selectionLockUtc.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm"))</span>
+                            <span>(@DisplayTimeRules.FormatPolandTime(_selectionLockUtc.Value, "dd.MM.yyyy HH:mm"))</span>
                         }.
                     </p>
                 }
@@ -334,7 +334,7 @@ else
                             {
                                 <tr class="history-row history-row--@PtsClass(h.PointsAwarded)">
                                     <td class="col-date">
-                                        @h.KickOffUtc.ToLocalTime().ToString("dd.MM")
+                                        @DisplayTimeRules.FormatPolandTime(h.KickOffUtc, "dd.MM")
                                     </td>
                                     <td class="col-match">
                                         <span class="match-teams">

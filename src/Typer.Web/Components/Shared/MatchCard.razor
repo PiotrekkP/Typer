@@ -6,7 +6,7 @@
 
     <!-- ── Kickoff + status + żywa minuta ───────────────────── -->
     <div class="match-kickoff">
-        <span class="kickoff-time">@Match.KickOffUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+        <span class="kickoff-time">@DisplayTimeRules.FormatPolandTime(Match.KickOffUtc, "dd.MM.yyyy HH:mm")</span>
 
         @if (ShowLiveBadge)
         {

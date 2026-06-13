@@ -30,7 +30,7 @@
             <a href="/admin/mecze" class="admin-back">← Lista meczów</a>
             <h1>@_match.HomeTeamName – @_match.AwayTeamName</h1>
             <p class="admin-subtitle">
-                @_match.KickOffUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                @DisplayTimeRules.FormatPolandTime(_match.KickOffUtc, "dd.MM.yyyy HH:mm")
                 · @StatusLabel(_match.Status)
                 @if (_match.Status == MatchStatus.InProgress)
                 {

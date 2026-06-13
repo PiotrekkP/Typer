@@ -49,7 +49,7 @@
                                     <span class="admin-badge">ręczny zegar</span>
                                 }
                             </td>
-                            <td>@m.KickOffUtc.ToLocalTime().ToString("dd.MM HH:mm")</td>
+                            <td>@DisplayTimeRules.FormatPolandTime(m.KickOffUtc, "dd.MM HH:mm")</td>
                             <td><span class="admin-status admin-status--@m.Status.ToString().ToLowerInvariant()">@StatusLabel(m.Status)</span></td>
                             <td>@ScoreLabel(m.HomeScore, m.AwayScore)</td>
                             <td>
