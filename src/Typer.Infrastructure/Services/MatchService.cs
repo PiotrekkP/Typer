@@ -4,6 +4,7 @@ using Typer.Application.Common.Models;
 using Typer.Application.Matches;
 using Typer.Application.Matches.DTOs;
 using Typer.Application.Matches.Interfaces;
+using Typer.Application.Rankings.Interfaces;
 using Typer.Application.Scoring.Interfaces;
 using Typer.Domain.Enums;
 using Typer.Infrastructure.Persistence;
@@ -14,15 +15,18 @@ public class MatchService : IMatchService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
     private readonly IScoringService _scoringService;
+    private readonly IRankingLiveBaselineService _rankingLiveBaselineService;
     private readonly ILogger<MatchService> _logger;
 
     public MatchService(
         IDbContextFactory<ApplicationDbContext> contextFactory,
         IScoringService scoringService,
+        IRankingLiveBaselineService rankingLiveBaselineService,
         ILogger<MatchService> logger)
     {
         _contextFactory = contextFactory;
         _scoringService = scoringService;
+        _rankingLiveBaselineService = rankingLiveBaselineService;
         _logger = logger;
     }
 
@@ -199,12 +203,20 @@ public class MatchService : IMatchService
         if (match is null)
             return Result.Failure("Mecz nie istnieje.");
 
+        var previousStatus = match.Status;
+
+        var enteredLive = previousStatus != MatchStatus.InProgress && request.Status == MatchStatus.InProgress;
+        var finishedLive = previousStatus == MatchStatus.InProgress && request.Status == MatchStatus.Finished;
+
         match.HomeScore = request.HomeScore;
         match.AwayScore = request.AwayScore;
         match.Status    = request.Status;
         match.UpdatedAt = DateTime.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);
+
+        if (enteredLive)
+            await _rankingLiveBaselineService.SyncWithLiveMatchesAsync(cancellationToken);
 
         if (request.Status == MatchStatus.InProgress
             || match.Status == MatchStatus.InProgress)
@@ -228,6 +240,9 @@ public class MatchService : IMatchService
                     "Punkty za mecz {MatchId} przyznane automatycznie.", matchId);
             }
         }
+
+        if (finishedLive)
+            await _rankingLiveBaselineService.SyncWithLiveMatchesAsync(cancellationToken);
 
         return Result.Success();
     }

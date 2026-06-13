@@ -22,6 +22,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<Prediction> Predictions => Set<Prediction>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<ScoringConfiguration> ScoringConfigurations => Set<ScoringConfiguration>();
+    public DbSet<RankingLiveBaseline> RankingLiveBaselines => Set<RankingLiveBaseline>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -6,6 +6,7 @@ using Typer.Application.Common.Models;
 using Typer.Application.Matches;
 using Typer.Application.Matches.DTOs;
 using Typer.Application.Matches.Interfaces;
+using Typer.Application.Rankings.Interfaces;
 using Typer.Application.Scoring.Interfaces;
 using Typer.Domain.Entities;
 using Typer.Domain.Enums;
@@ -18,17 +19,20 @@ public class AdminMatchService : IAdminMatchService
     private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
     private readonly IMatchService _matchService;
     private readonly IScoringService _scoringService;
+    private readonly IRankingLiveBaselineService _rankingLiveBaselineService;
     private readonly ILogger<AdminMatchService> _logger;
 
     public AdminMatchService(
         IDbContextFactory<ApplicationDbContext> contextFactory,
         IMatchService matchService,
         IScoringService scoringService,
+        IRankingLiveBaselineService rankingLiveBaselineService,
         ILogger<AdminMatchService> logger)
     {
         _contextFactory = contextFactory;
         _matchService = matchService;
         _scoringService = scoringService;
+        _rankingLiveBaselineService = rankingLiveBaselineService;
         _logger = logger;
     }
 
@@ -145,6 +149,7 @@ public class AdminMatchService : IAdminMatchService
         if (match is null)
             return Result.Failure("Mecz nie istnieje.");
 
+        var wasLive = match.Status == MatchStatus.InProgress;
         var now = DateTime.UtcNow;
         match.UseManualClock = true;
         match.Status = MatchStatus.InProgress;
@@ -154,6 +159,10 @@ public class AdminMatchService : IAdminMatchService
         match.UpdatedAt = now;
 
         await context.SaveChangesAsync(cancellationToken);
+
+        if (!wasLive)
+            await _rankingLiveBaselineService.SyncWithLiveMatchesAsync(cancellationToken);
+
         _logger.LogInformation("Admin: mecz {MatchId} — pierwsza połowa.", matchId);
         return Result.Success();
     }
@@ -224,6 +233,8 @@ public class AdminMatchService : IAdminMatchService
         if (!scoringResult.Succeeded)
             return scoringResult;
 
+        await _rankingLiveBaselineService.SyncWithLiveMatchesAsync(cancellationToken);
+
         _logger.LogInformation("Admin: mecz {MatchId} — zakończony i rozliczony.", matchId);
         return Result.Success();
     }
@@ -239,6 +250,7 @@ public class AdminMatchService : IAdminMatchService
         if (match is null)
             return Result.Failure("Mecz nie istnieje.");
 
+        var wasLive = match.Status == MatchStatus.InProgress;
         var now = DateTime.UtcNow;
         match.UseManualClock = true;
         match.Status = MatchStatus.InProgress;
@@ -258,6 +270,10 @@ public class AdminMatchService : IAdminMatchService
         match.UpdatedAt = now;
 
         await context.SaveChangesAsync(cancellationToken);
+
+        if (!wasLive)
+            await _rankingLiveBaselineService.SyncWithLiveMatchesAsync(cancellationToken);
+
         return Result.Success();
     }
 

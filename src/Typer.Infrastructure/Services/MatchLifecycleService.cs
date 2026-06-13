@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Typer.Application.Matches;
 using Typer.Application.Matches.Interfaces;
 using Typer.Application.Scoring.Interfaces;
+using Typer.Application.Rankings.Interfaces;
 using Typer.Domain.Enums;
 using Typer.Infrastructure.Persistence;
 
@@ -12,15 +13,18 @@ public class MatchLifecycleService : IMatchLifecycleService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
     private readonly IScoringService _scoringService;
+    private readonly IRankingLiveBaselineService _rankingLiveBaselineService;
     private readonly ILogger<MatchLifecycleService> _logger;
 
     public MatchLifecycleService(
         IDbContextFactory<ApplicationDbContext> contextFactory,
         IScoringService scoringService,
+        IRankingLiveBaselineService rankingLiveBaselineService,
         ILogger<MatchLifecycleService> logger)
     {
         _contextFactory = contextFactory;
         _scoringService = scoringService;
+        _rankingLiveBaselineService = rankingLiveBaselineService;
         _logger = logger;
     }
 
@@ -46,7 +50,10 @@ public class MatchLifecycleService : IMatchLifecycleService
         }
 
         if (toStart.Count > 0)
+        {
             await context.SaveChangesAsync(cancellationToken);
+            await _rankingLiveBaselineService.SyncWithLiveMatchesAsync(cancellationToken);
+        }
 
         var liveEndsBefore = now - MatchLifecycleRules.LiveDuration;
 
@@ -84,5 +91,7 @@ public class MatchLifecycleService : IMatchLifecycleService
                     match.Id, scoringResult.Error);
             }
         }
+
+        await _rankingLiveBaselineService.SyncWithLiveMatchesAsync(cancellationToken);
     }
 }

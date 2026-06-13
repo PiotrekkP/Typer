@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IPlayerService, PlayerService>();
         services.AddScoped<IPredictionService, PredictionService>();
         services.AddScoped<IRankingService, RankingService>();
+        services.AddScoped<IRankingLiveBaselineService, RankingLiveBaselineService>();
         services.AddScoped<IScoringService, ScoringService>();
         services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<IAdminMatchService, AdminMatchService>();

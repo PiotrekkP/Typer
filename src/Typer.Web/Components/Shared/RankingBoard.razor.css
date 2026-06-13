@@ -29,17 +29,6 @@
     margin-top: 12px;
 }
 
-.ranking-refresh-btn--secondary {
-    background: #f9fafb;
-}
-
-.ranking-hint {
-    margin: 10px 0 0;
-    font-size: 0.8rem;
-    color: #6b7280;
-    text-align: center;
-}
-
 .ranking-refresh-btn:hover:not(:disabled) {
     background: #f9fafb;
     border-color: #9ca3af;
