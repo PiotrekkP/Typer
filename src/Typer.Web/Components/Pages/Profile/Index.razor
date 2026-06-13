@@ -383,8 +383,6 @@ else
                 </div>
 
                 <div class="history-summary">
-                    <span>Meczów na żywo z typem: <strong>@_profile.PredictionHistory.Count(h => h.IsLive)</strong></span>
-                    <span>Zakończonych meczów z typem: <strong>@_profile.PredictionHistory.Count(h => !h.IsLive)</strong></span>
                     <span>Trafionych wyników: <strong>@_profile.PredictionHistory.Count(h => !h.IsLive && h.BasePoints is > 0)</strong></span>
                     <span>Dokładnych wyników: <strong>@_profile.PredictionHistory.Count(h => !h.IsLive && h.PointsAwarded >= 5)</strong></span>
                 </div>
