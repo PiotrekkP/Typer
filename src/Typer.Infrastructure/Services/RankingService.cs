@@ -14,11 +14,17 @@ public class RankingService : IRankingService
         _contextFactory = contextFactory;
     }
 
-    public async Task<IReadOnlyList<RankingEntryDto>> GetLeaderboardAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RankingEntryDto>> GetLeaderboardAsync(
+        bool vipOnly = false,
+        CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
-        var entries = await context.UserProfiles
+        var query = context.UserProfiles.AsQueryable();
+        if (vipOnly)
+            query = query.Where(p => p.VipUser);
+
+        var entries = await query
             .Include(p => p.SelectedTeam)
             .Include(p => p.SelectedPlayer)
             .OrderByDescending(p => p.TotalPoints)

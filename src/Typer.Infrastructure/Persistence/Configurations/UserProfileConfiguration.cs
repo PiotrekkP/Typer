@@ -10,7 +10,9 @@ public class UserProfileConfiguration : IEntityTypeConfiguration<UserProfile>
     {
         builder.HasKey(p => p.Id);
         builder.Property(p => p.DisplayName).HasMaxLength(100).IsRequired();
+        builder.Property(p => p.VipUser).HasDefaultValue(false);
         builder.HasIndex(p => p.UserId).IsUnique();
+        builder.HasIndex(p => p.VipUser);
 
         builder.HasOne(p => p.SelectedTeam)
             .WithMany()

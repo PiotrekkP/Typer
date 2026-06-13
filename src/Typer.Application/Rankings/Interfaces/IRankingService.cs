@@ -4,5 +4,7 @@ using Typer.Application.Rankings.DTOs;
 
 public interface IRankingService
 {
-    Task<IReadOnlyList<RankingEntryDto>> GetLeaderboardAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RankingEntryDto>> GetLeaderboardAsync(
+        bool vipOnly = false,
+        CancellationToken cancellationToken = default);
 }

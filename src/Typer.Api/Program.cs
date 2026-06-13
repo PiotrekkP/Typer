@@ -80,6 +80,7 @@ app.MapHealthChecks("/health");
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     _ = AdminRoleSeeder.EnsureAsync(app.Services);
+    _ = VipRoleSeeder.EnsureAsync(app.Services);
 });
 
 app.Run();

@@ -105,6 +105,8 @@ if (app.Environment.IsDevelopment())
 {
     await using var scope = app.Services.CreateAsyncScope();
     await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.MigrateAsync();
+    await AdminRoleSeeder.EnsureAsync(app.Services);
+    await VipRoleSeeder.EnsureAsync(app.Services);
 }
 
 app.Lifetime.ApplicationStarted.Register(() =>
@@ -119,6 +121,7 @@ static async Task RunStartupJobsAsync(IServiceProvider services)
     try
     {
         await AdminRoleSeeder.EnsureAsync(services);
+        await VipRoleSeeder.EnsureAsync(services);
 
         await using var scope = services.CreateAsyncScope();
         var lifecycle = scope.ServiceProvider.GetRequiredService<IMatchLifecycleService>();

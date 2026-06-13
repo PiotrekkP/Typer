@@ -114,7 +114,6 @@
     border-bottom: 1px solid #f3f4f6;
 }
 
-/* ── Wiersze medalowe ─────────────────────────────────────── */
 .ranking-row--gold   { background: #fefce8; }
 .ranking-row--silver { background: #f9fafb; }
 .ranking-row--bronze { background: #ead9c8; }
@@ -124,7 +123,6 @@
 
 .ranking-row:hover { background: #f0f9ff !important; transition: background .15s; }
 
-/* ── Badge pozycji ────────────────────────────────────────── */
 .position-badge {
     display: inline-flex;
     align-items: center;
@@ -141,7 +139,6 @@
 .position-badge--bronze { background: #9c5b24; color: #fff8f0; font-size: 1.2rem; }
 .position-badge--other  { background: #f3f4f6; color: #6b7280; }
 
-/* ── Kolumny ──────────────────────────────────────────────── */
 .col-pos    { width: 50px; text-align: center; }
 .col-pts    { text-align: right; white-space: nowrap; }
 
@@ -150,7 +147,6 @@
 
 .col-pts--sub th { font-size: 0.7rem; }
 
-/* ── Flaga w tabeli ───────────────────────────────────────── */
 .col-team__inner {
     display: inline-flex;
     align-items: center;
@@ -166,7 +162,6 @@
     flex-shrink: 0;
 }
 
-/* ── Legenda ──────────────────────────────────────────────── */
 .ranking-legend {
     display: flex;
     flex-wrap: wrap;
@@ -180,7 +175,6 @@
     color: #6b7280;
 }
 
-/* ── Responsywność ────────────────────────────────────────── */
 @media (max-width: 700px) {
     .podium { flex-direction: row; align-items: stretch; }
     .podium__place--1 { order: 1; }
@@ -189,7 +183,6 @@
     .ranking-table th, .ranking-table td { padding: 10px 8px; }
 }
 
-/* ── Linki do profilu ────────────────────────────────────── */
 .player-link {
     color: #111827;
     text-decoration: none;

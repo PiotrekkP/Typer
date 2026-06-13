@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,6 +27,7 @@ public static class DependencyInjection
     {
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
+        services.Configure<VipOptions>(configuration.GetSection(VipOptions.SectionName));
 
         var connectionString = configuration.GetConnectionString("DefaultConnection");
 
@@ -48,6 +50,7 @@ public static class DependencyInjection
             .AddDefaultTokenProviders();
 
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IClaimsTransformation, VipClaimsTransformation>();
         services.AddScoped<IMatchService, MatchService>();
         services.AddScoped<IMatchLifecycleService, MatchLifecycleService>();
         services.AddScoped<ISelectionLockService, SelectionLockService>();

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Typer.Application.Rankings.DTOs;
 using Typer.Application.Rankings.Interfaces;
+using Typer.Infrastructure.Services;
 
 namespace Typer.Api.Controllers;
 
@@ -20,7 +21,15 @@ public class RankingsController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<RankingEntryDto>>> GetLeaderboard(CancellationToken cancellationToken)
     {
-        var ranking = await _rankingService.GetLeaderboardAsync(cancellationToken);
+        var ranking = await _rankingService.GetLeaderboardAsync(cancellationToken: cancellationToken);
+        return Ok(ranking);
+    }
+
+    [HttpGet("vip")]
+    [Authorize(Roles = VipRoleSeeder.VipRoleName)]
+    public async Task<ActionResult<IReadOnlyList<RankingEntryDto>>> GetVipLeaderboard(CancellationToken cancellationToken)
+    {
+        var ranking = await _rankingService.GetLeaderboardAsync(vipOnly: true, cancellationToken: cancellationToken);
         return Ok(ranking);
     }
 }

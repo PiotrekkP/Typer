@@ -216,3 +216,8 @@
     color: #7c3aed !important;
     font-weight: 600;
 }
+
+.site-nav__link--vip {
+    color: #b45309 !important;
+    font-weight: 600;
+}

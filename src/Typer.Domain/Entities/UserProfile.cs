@@ -20,4 +20,6 @@ public class UserProfile : BaseEntity
     public int TeamBonusPoints { get; set; }
     public int PlayerGoalPoints { get; set; }
     public int TournamentWinnerPoints { get; set; }
+
+    public bool VipUser { get; set; }
 }

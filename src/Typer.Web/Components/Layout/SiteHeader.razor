@@ -13,7 +13,10 @@
 
         <nav class="site-nav site-nav--desktop" aria-label="Główne menu">
             <NavLink class="site-nav__link" href="/typowanie" Match="NavLinkMatch.Prefix">Typowanie</NavLink>
-            <NavLink class="site-nav__link" href="/ranking" Match="NavLinkMatch.Prefix">Ranking</NavLink>
+            <NavLink class="site-nav__link" href="/ranking" Match="NavLinkMatch.All">Ranking</NavLink>
+            <AuthorizeView Roles="Vip">
+                <NavLink class="site-nav__link site-nav__link--vip" href="/ranking/vip" Match="NavLinkMatch.All">Ranking $</NavLink>
+            </AuthorizeView>
             <NavLink class="site-nav__link" href="/zasady" Match="NavLinkMatch.Prefix">Zasady</NavLink>
             <AuthorizeView Roles="Admin">
                 <NavLink class="site-nav__link site-nav__link--admin" href="/admin/mecze" Match="NavLinkMatch.Prefix">Admin</NavLink>
@@ -50,7 +53,10 @@
     <div id="site-header-drawer" class="site-header__drawer">
         <nav class="site-nav site-nav--drawer" aria-label="Menu mobilne">
             <NavLink class="site-nav__link site-nav__link--drawer" href="/typowanie" Match="NavLinkMatch.Prefix">Typowanie</NavLink>
-            <NavLink class="site-nav__link site-nav__link--drawer" href="/ranking" Match="NavLinkMatch.Prefix">Ranking</NavLink>
+            <NavLink class="site-nav__link site-nav__link--drawer" href="/ranking" Match="NavLinkMatch.All">Ranking</NavLink>
+            <AuthorizeView Roles="Vip">
+                <NavLink class="site-nav__link site-nav__link--vip site-nav__link--drawer" href="/ranking/vip" Match="NavLinkMatch.All">Ranking $</NavLink>
+            </AuthorizeView>
             <NavLink class="site-nav__link site-nav__link--drawer" href="/zasady" Match="NavLinkMatch.Prefix">Zasady</NavLink>
             <AuthorizeView Roles="Admin">
                 <NavLink class="site-nav__link site-nav__link--admin site-nav__link--drawer" href="/admin/mecze" Match="NavLinkMatch.Prefix">Admin</NavLink>
