@@ -16,7 +16,7 @@
 }
 else if (_rounds.Count == 0)
 {
-    <p>Brak meczów do wyświetlenia.</p>
+    <p>Brak meczów do typowania.</p>
 }
 else
 {
@@ -71,7 +71,7 @@ else
     private void StartRefreshTimerIfNeeded()
     {
         if (_refreshTimer is not null) return;
-        if (_rounds is null || !HasLiveMatches()) return;
+        if (_rounds is null || !HasOpenMatches()) return;
 
         _refreshCts   = new CancellationTokenSource();
         _refreshTimer = new PeriodicTimer(TimeSpan.FromMinutes(1));
@@ -91,8 +91,8 @@ else
         catch (OperationCanceledException) { }
     }
 
-    private bool HasLiveMatches() =>
-        _rounds?.Any(r => r.Matches.Any(m => m.Status == "InProgress")) ?? false;
+    private bool HasOpenMatches() =>
+        _rounds?.Any(r => r.Matches.Count > 0) ?? false;
 
     private async Task LoadRoundsAsync()
     {

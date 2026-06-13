@@ -65,7 +65,9 @@ public class UserProfileService : IUserProfileService
             .CountAsync(p => p.TotalPoints > profile.TotalPoints, cancellationToken) + 1;
 
         var history = await context.Predictions
-            .Where(p => p.UserId == userId && p.Match.Status == MatchStatus.Finished)
+            .Where(p => p.UserId == userId
+                        && (p.Match.Status == MatchStatus.Finished
+                            || p.Match.Status == MatchStatus.InProgress))
             .Include(p => p.Match)
                 .ThenInclude(m => m.HomeTeam)
             .Include(p => p.Match)
@@ -86,7 +88,8 @@ public class UserProfileService : IUserProfileService
                 p.PointsAwarded,
                 p.BasePoints,
                 p.TeamBonusPoints,
-                p.PlayerGoalPoints))
+                p.PlayerGoalPoints,
+                p.Match.Status == MatchStatus.InProgress))
             .ToListAsync(cancellationToken);
 
         var playerName = profile.SelectedPlayer is null ? null

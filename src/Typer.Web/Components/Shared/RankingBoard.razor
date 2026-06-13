@@ -7,29 +7,6 @@
 
 <div class="ranking-page">
 
-    <div class="ranking-header">
-        <h1 class="ranking-title">@Title</h1>
-        <p class="ranking-subtitle">
-            @Subtitle
-            @if (_liveRefreshActive)
-            {
-                <span class="ranking-live-hint"> · mecze na żywo — odświeżanie co @RefreshIntervalSeconds s</span>
-            }
-            else
-            {
-                <span class="ranking-live-hint ranking-live-hint--muted"> · odświeżanie co @RefreshIntervalSeconds s</span>
-            }
-        </p>
-        @if (_ranking is not null && _ranking.Count > 0)
-        {
-            <div class="ranking-actions">
-                <button type="button" class="ranking-refresh-btn" disabled="@_refreshing" @onclick="ManualRefreshAsync">
-                    @(_refreshing ? "Odświeżanie…" : "Odśwież teraz")
-                </button>
-            </div>
-        }
-    </div>
-
     @if (_ranking is null)
     {
         <p class="loading">Ładowanie rankingu…</p>
@@ -141,14 +118,10 @@
 
 @code {
     [Parameter] public bool VipOnly { get; set; }
-    [Parameter] public string Title { get; set; } = "Ranking punktowy";
-    [Parameter] public string Subtitle { get; set; } = "Podział punktów według kategorii typowania";
     [Parameter] public string EmptyMessage { get; set; } = "Ranking jest pusty — nikt jeszcze nie typował.";
 
     private IReadOnlyList<RankingEntryDto>? _ranking;
     private Dictionary<string, int> _positionDeltas = new();
-    private bool _liveRefreshActive;
-    private bool _refreshing;
 
     private PeriodicTimer? _refreshTimer;
     private CancellationTokenSource? _refreshCts;
@@ -157,8 +130,6 @@
         HostEnvironment.IsDevelopment()
             ? TimeSpan.FromSeconds(15)
             : LiveScoringRules.RefreshInterval;
-
-    private int RefreshIntervalSeconds => (int)RefreshInterval.TotalSeconds;
 
     protected override async Task OnInitializedAsync()
     {
@@ -174,21 +145,6 @@
             static pair => pair.Key,
             static pair => pair.Value,
             StringComparer.Ordinal);
-        _liveRefreshActive = snapshot.LiveSessionActive;
-    }
-
-    private async Task ManualRefreshAsync()
-    {
-        _refreshing = true;
-        try
-        {
-            await RefreshRankingAsync();
-            await InvokeAsync(StateHasChanged);
-        }
-        finally
-        {
-            _refreshing = false;
-        }
     }
 
     private void StartRefreshTimer()

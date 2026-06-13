@@ -32,6 +32,7 @@ public class MatchService : IMatchService
 
     public async Task<IReadOnlyList<RoundWithMatchesDto>> GetRoundsWithMatchesAsync(
         string? userId = null,
+        MatchRoundsScope scope = MatchRoundsScope.Active,
         CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
@@ -49,12 +50,16 @@ public class MatchService : IMatchService
 
         Dictionary<Guid, (int? Home, int? Away, int? Points, int? Base, int? TeamBonus, int? PlayerGoal)> predictions = [];
 
-        if (userId is not null)
-        {
-            var matchIds = rounds.SelectMany(r => r.Matches).Select(m => m.Id).ToList();
+        var scopedMatches = rounds
+            .SelectMany(r => r.Matches)
+            .Where(m => MatchesScope(m, scope))
+            .Select(m => m.Id)
+            .ToList();
 
+        if (userId is not null && scopedMatches.Count > 0)
+        {
             predictions = await context.Predictions
-                .Where(p => p.UserId == userId && matchIds.Contains(p.MatchId))
+                .Where(p => p.UserId == userId && scopedMatches.Contains(p.MatchId))
                 .AsNoTracking()
                 .ToDictionaryAsync(
                     p => p.MatchId,
@@ -63,19 +68,40 @@ public class MatchService : IMatchService
                     cancellationToken);
         }
 
-        return rounds.Select(round => new RoundWithMatchesDto(
-            round.Id,
-            round.Name,
-            round.OrderNumber,
-            round.Matches
-                .OrderBy(m => m.KickOffUtc)
-                .Select(match =>
-                {
-                    predictions.TryGetValue(match.Id, out var pred);
-                    return MapMatchDetailDto(match, pred);
-                })
-                .ToList()
-        )).ToList();
+        return rounds
+            .Select(round =>
+            {
+                var scoped = round.Matches.Where(m => MatchesScope(m, scope)).ToList();
+                var orderedMatches = scope == MatchRoundsScope.Results
+                    ? scoped
+                        .OrderByDescending(m =>
+                            MatchLifecycleRules.GetEffectiveStatus(m.Status, m.KickOffUtc) == MatchStatus.InProgress)
+                        .ThenByDescending(m => m.KickOffUtc)
+                    : scoped.OrderBy(m => m.KickOffUtc);
+
+                var matches = orderedMatches
+                    .Select(match =>
+                    {
+                        predictions.TryGetValue(match.Id, out var pred);
+                        return MapMatchDetailDto(match, pred);
+                    })
+                    .ToList();
+
+                return new RoundWithMatchesDto(round.Id, round.Name, round.OrderNumber, matches);
+            })
+            .Where(round => round.Matches.Count > 0)
+            .ToList();
+    }
+
+    private static bool MatchesScope(Typer.Domain.Entities.Match match, MatchRoundsScope scope)
+    {
+        var effective = MatchLifecycleRules.GetEffectiveStatus(match.Status, match.KickOffUtc);
+        return scope switch
+        {
+            MatchRoundsScope.Active => effective == MatchStatus.Scheduled,
+            MatchRoundsScope.Results => effective is MatchStatus.InProgress or MatchStatus.Finished,
+            _ => false
+        };
     }
 
     public async Task<IReadOnlyList<MatchDetailDto>> GetUpcomingMatchesAsync(
@@ -89,13 +115,17 @@ public class MatchService : IMatchService
             .Include(m => m.HomeTeam)
             .Include(m => m.AwayTeam)
             .Include(m => m.GoalScorers.OrderBy(g => g.Minute))
-            .Where(m => m.Status == MatchStatus.Scheduled || m.Status == MatchStatus.InProgress)
+            .Where(m => m.Status == MatchStatus.Scheduled)
             .OrderBy(m => m.KickOffUtc)
-            .Take(count)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        return await MapToDetailDtos(context, matches, userId, cancellationToken);
+        var openMatches = matches
+            .Where(m => MatchesScope(m, MatchRoundsScope.Active))
+            .Take(count)
+            .ToList();
+
+        return await MapToDetailDtos(context, openMatches, userId, cancellationToken);
     }
 
     public async Task<IReadOnlyList<MatchDetailDto>> GetRecentFinishedMatchesAsync(
@@ -251,5 +281,78 @@ public class MatchService : IMatchService
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         return await context.Matches.AnyAsync(m => m.Status == MatchStatus.InProgress, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ResultsMatchOptionDto>> GetResultsMatchOptionsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var candidates = await context.Matches
+            .AsNoTracking()
+            .Include(m => m.HomeTeam)
+            .Include(m => m.AwayTeam)
+            .Include(m => m.Round)
+            .Where(m => m.Status != MatchStatus.Cancelled)
+            .ToListAsync(cancellationToken);
+
+        return candidates
+            .Where(m => MatchesScope(m, MatchRoundsScope.Results))
+            .OrderByDescending(m => m.KickOffUtc)
+            .Select(m => new ResultsMatchOptionDto(
+                m.Id,
+                m.Round != null ? m.Round.Name : "Inne",
+                m.Round != null ? m.Round.OrderNumber : int.MaxValue,
+                m.HomeTeam.Name,
+                m.HomeTeam.FlagUrl,
+                m.AwayTeam.Name,
+                m.AwayTeam.FlagUrl,
+                m.KickOffUtc,
+                m.Status.ToString(),
+                m.HomeScore,
+                m.AwayScore))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<MatchPredictionResultDto>> GetMatchPredictionResultsAsync(
+        Guid matchId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var match = await context.Matches
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == matchId, cancellationToken);
+
+        if (match is null || !MatchesScope(match, MatchRoundsScope.Results))
+            return [];
+
+        var predictions = await context.Predictions
+            .AsNoTracking()
+            .Where(p => p.MatchId == matchId)
+            .ToListAsync(cancellationToken);
+
+        if (predictions.Count == 0)
+            return [];
+
+        var userIds = predictions.Select(p => p.UserId).Distinct().ToList();
+        var displayNames = await context.UserProfiles
+            .AsNoTracking()
+            .Where(p => userIds.Contains(p.UserId))
+            .ToDictionaryAsync(p => p.UserId, p => p.DisplayName, cancellationToken);
+
+        return predictions
+            .Select(p => new MatchPredictionResultDto(
+                p.UserId,
+                displayNames.GetValueOrDefault(p.UserId) ?? p.UserId,
+                p.PredictedHomeScore,
+                p.PredictedAwayScore,
+                p.PointsAwarded,
+                p.BasePoints,
+                p.TeamBonusPoints,
+                p.PlayerGoalPoints))
+            .OrderByDescending(r => r.PointsAwarded ?? -1)
+            .ThenBy(r => r.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

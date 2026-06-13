@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Typer.Application.Matches;
 using Typer.Application.Matches.DTOs;
 using Typer.Application.Matches.Interfaces;
 using Typer.Application.Scoring.Interfaces;
@@ -21,14 +22,21 @@ public class MatchesController : ControllerBase
     }
 
     /// <summary>
-    /// Zwraca wszystkie kolejki z meczami. Jeśli użytkownik jest zalogowany,
-    /// dołącza jego typy i zdobyte punkty.
+    /// Zwraca kolejki z meczami. Domyślnie tylko aktywne (zaplanowane i na żywo).
+    /// Parametr scope=results zwraca mecze rozpoczęte lub zakończone.
     /// </summary>
     [HttpGet("rounds")]
-    public async Task<ActionResult<IReadOnlyList<RoundWithMatchesDto>>> GetRounds(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<RoundWithMatchesDto>>> GetRounds(
+        [FromQuery] string? scope,
+        CancellationToken cancellationToken)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var rounds = await _matchService.GetRoundsWithMatchesAsync(userId, cancellationToken);
+        var roundsScope = string.Equals(scope, "results", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(scope, "finished", StringComparison.OrdinalIgnoreCase)
+            ? MatchRoundsScope.Results
+            : MatchRoundsScope.Active;
+
+        var rounds = await _matchService.GetRoundsWithMatchesAsync(userId, roundsScope, cancellationToken);
         return Ok(rounds);
     }
 

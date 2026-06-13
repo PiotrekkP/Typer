@@ -27,7 +27,8 @@ public record UserPredictionHistoryDto(
     int? PointsAwarded,
     int? BasePoints,
     int? TeamBonusPoints,
-    int? PlayerGoalPoints);
+    int? PlayerGoalPoints,
+    bool IsLive);
 
 public record UserPublicProfileDto(
     string UserId,

@@ -1,0 +1,219 @@
+@page "/historia"
+@inject IMatchService MatchService
+@using Typer.Application.Matches
+@using Typer.Application.Matches.DTOs
+
+<PageTitle>Historia — Typer</PageTitle>
+
+<h1 class="page-title">Historia typów</h1>
+
+<div class="results-page">
+    @if (_matches is null)
+    {
+        <p class="results-loading">Ładowanie meczów…</p>
+    }
+    else if (_matches.Count == 0)
+    {
+        <p class="results-empty">Brak rozpoczętych lub zakończonych meczów.</p>
+    }
+    else
+    {
+        <div class="results-toolbar">
+            <label class="results-select-label" for="results-match-select">Mecz</label>
+            <select id="results-match-select"
+                    class="results-select"
+                    @onchange="OnMatchSelectedAsync">
+                @foreach (var round in _roundGroups)
+                {
+                    <optgroup label="@round.Key">
+                        @foreach (var match in round)
+                        {
+                            <option value="@match.MatchId" selected="@(match.MatchId == _selectedMatchId)">
+                                @FormatMatchOption(match)
+                            </option>
+                        }
+                    </optgroup>
+                }
+            </select>
+        </div>
+
+        @if (_selectedMatch is not null)
+        {
+            <div class="results-match-header">
+                <div class="results-match-teams">
+                    @if (!string.IsNullOrEmpty(_selectedMatch.HomeTeamFlagUrl))
+                    {
+                        <img src="@_selectedMatch.HomeTeamFlagUrl" alt="" class="results-flag" width="28" height="20" />
+                    }
+                    <span class="results-team-name">@_selectedMatch.HomeTeamName</span>
+                    <span class="results-score">
+                        @if (_selectedMatch.HomeScore.HasValue && _selectedMatch.AwayScore.HasValue)
+                        {
+                            @($"{_selectedMatch.HomeScore}:{_selectedMatch.AwayScore}")
+                        }
+                        else
+                        {
+                            <text>vs</text>
+                        }
+                    </span>
+                    <span class="results-team-name">@_selectedMatch.AwayTeamName</span>
+                    @if (!string.IsNullOrEmpty(_selectedMatch.AwayTeamFlagUrl))
+                    {
+                        <img src="@_selectedMatch.AwayTeamFlagUrl" alt="" class="results-flag" width="28" height="20" />
+                    }
+                </div>
+                <div class="results-match-meta">
+                    <span>@_selectedMatch.RoundName</span>
+                    <span>·</span>
+                    <span>@DisplayTimeRules.FormatPolandTime(_selectedMatch.KickOffUtc, "dd.MM.yyyy HH:mm")</span>
+                    <span>·</span>
+                    <span class="results-status results-status--@_selectedMatch.Status.ToLowerInvariant()">
+                        @StatusLabel(_selectedMatch.Status)
+                    </span>
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(_loadError))
+        {
+            <p class="results-error">@_loadError</p>
+        }
+        else if (_loadingPredictions)
+        {
+            <p class="results-loading">Ładowanie typów…</p>
+        }
+        else if (_predictions.Count == 0)
+        {
+            <p class="results-empty">Nikt nie typował tego meczu.</p>
+        }
+        else
+        {
+            <div class="results-table-wrapper">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Gracz</th>
+                            <th>Typ</th>
+                            <th title="Suma punktów">Pkt</th>
+                            <th title="Punkty bazowe">⚽</th>
+                            <th title="Bonus drużyna">★</th>
+                            <th title="Gole zawodnika">👟</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < _predictions.Count; i++)
+                        {
+                            var row = _predictions[i];
+                            <tr class="results-row results-row--@RowClass(row)">
+                                <td class="col-pos">@(i + 1)</td>
+                                <td class="col-player">
+                                    <a href="/gracz/@row.UserId" class="results-player-link">@row.DisplayName</a>
+                                </td>
+                                <td class="col-pred">@FormatPrediction(row)</td>
+                                <td class="col-pts total">@FormatPoints(row.PointsAwarded, _selectedMatch?.Status)</td>
+                                <td class="col-pts sub">@(row.BasePoints ?? 0)</td>
+                                <td class="col-pts sub">@(row.TeamBonusPoints ?? 0)</td>
+                                <td class="col-pts sub">@(row.PlayerGoalPoints ?? 0)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private IReadOnlyList<ResultsMatchOptionDto> _matches = [];
+    private List<MatchPredictionResultDto> _predictions = [];
+    private Guid _selectedMatchId;
+    private ResultsMatchOptionDto? _selectedMatch;
+    private bool _loadingPredictions;
+    private string? _loadError;
+
+    private IEnumerable<IGrouping<string, ResultsMatchOptionDto>> _roundGroups =>
+        _matches
+            .OrderBy(m => m.RoundOrderNumber)
+            .ThenByDescending(m => m.KickOffUtc)
+            .GroupBy(m => m.RoundName);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _matches = await MatchService.GetResultsMatchOptionsAsync();
+
+        if (_matches.Count > 0)
+        {
+            _selectedMatchId = _matches[0].MatchId;
+            _selectedMatch = _matches[0];
+            await LoadPredictionsAsync();
+        }
+    }
+
+    private async Task OnMatchSelectedAsync(ChangeEventArgs e)
+    {
+        if (!Guid.TryParse(e.Value?.ToString(), out var matchId))
+            return;
+
+        _selectedMatchId = matchId;
+        _selectedMatch = _matches.FirstOrDefault(m => m.MatchId == matchId);
+        await LoadPredictionsAsync();
+    }
+
+    private async Task LoadPredictionsAsync()
+    {
+        if (_selectedMatchId == Guid.Empty)
+        {
+            _predictions = [];
+            return;
+        }
+
+        _loadingPredictions = true;
+        _loadError = null;
+
+        try
+        {
+            _predictions = (await MatchService.GetMatchPredictionResultsAsync(_selectedMatchId)).ToList();
+        }
+        catch (Exception)
+        {
+            _predictions = [];
+            _loadError = "Nie udało się wczytać typów. Odśwież stronę.";
+        }
+        finally
+        {
+            _loadingPredictions = false;
+        }
+    }
+
+    private static string FormatMatchOption(ResultsMatchOptionDto match)
+    {
+        var score = match.HomeScore.HasValue && match.AwayScore.HasValue
+            ? $" ({match.HomeScore}:{match.AwayScore})"
+            : match.Status == "InProgress" ? " (na żywo)" : string.Empty;
+
+        return $"{match.HomeTeamName} – {match.AwayTeamName}{score} · {DisplayTimeRules.FormatPolandTime(match.KickOffUtc, "dd.MM HH:mm")}";
+    }
+
+    private static string FormatPrediction(MatchPredictionResultDto row) =>
+        $"{row.PredictedHomeScore}:{row.PredictedAwayScore}";
+
+    private static string StatusLabel(string status) => status switch
+    {
+        "InProgress" => "Na żywo",
+        "Finished" => "Zakończony",
+        _ => status
+    };
+
+    private static string FormatPoints(int? points, string? status) =>
+        points?.ToString() ?? (status == "InProgress" ? "…" : "0");
+
+    private static string RowClass(MatchPredictionResultDto row) =>
+        row.PointsAwarded switch
+        {
+            >= 5 => "high",
+            >= 1 => "hit",
+            0 => "miss",
+            _ => "pending"
+        };
+}

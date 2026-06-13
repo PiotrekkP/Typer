@@ -1,0 +1,58 @@
+@page "/wyniki"
+@using System.Security.Claims
+@inject IMatchService MatchService
+@inject AuthenticationStateProvider AuthStateProvider
+@using Typer.Application.Matches
+
+<PageTitle>Wyniki — Typer</PageTitle>
+
+<h1 class="page-title">Wyniki meczów</h1>
+
+@if (_rounds is null)
+{
+    <p class="loading">Ładowanie wyników…</p>
+}
+else if (_rounds.Count == 0)
+{
+    <p>Brak rozpoczętych ani zakończonych meczów.</p>
+}
+else
+{
+    @foreach (var round in _rounds)
+    {
+        <section class="round-section">
+            <h2 class="round-title">@round.Name</h2>
+
+            <div class="matches-list">
+                @foreach (var match in round.Matches)
+                {
+                    <MatchCard Match="match" IsAuthenticated="_isAuthenticated" />
+                }
+            </div>
+        </section>
+    }
+}
+
+@if (!_isAuthenticated)
+{
+    <p class="guest-info">
+        💡 <a href="/logowanie">Zaloguj się</a>, żeby zobaczyć swoje typy i punkty za zakończone mecze.
+    </p>
+}
+
+@code {
+    private IReadOnlyList<RoundWithMatchesDto>? _rounds;
+    private bool _isAuthenticated;
+    private string? _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        _userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        _rounds = await MatchService.GetRoundsWithMatchesAsync(
+            userId: _userId,
+            scope: MatchRoundsScope.Results);
+    }
+}

@@ -311,7 +311,7 @@ else
 
             @if (_profile.PredictionHistory.Count == 0)
             {
-                <p class="history-empty">Brak typów na zakończonych meczach.</p>
+                <p class="history-empty">Brak typów na rozpoczętych lub zakończonych meczach.</p>
             }
             else
             {
@@ -332,9 +332,13 @@ else
                         <tbody>
                             @foreach (var h in _profile.PredictionHistory)
                             {
-                                <tr class="history-row history-row--@PtsClass(h.PointsAwarded)">
+                                <tr class="history-row history-row--@HistoryRowClass(h)">
                                     <td class="col-date">
                                         @DisplayTimeRules.FormatPolandTime(h.KickOffUtc, "dd.MM")
+                                        @if (h.IsLive)
+                                        {
+                                            <span class="history-live-badge">Na żywo</span>
+                                        }
                                     </td>
                                     <td class="col-match">
                                         <span class="match-teams">
@@ -352,12 +356,23 @@ else
                                         </span>
                                     </td>
                                     <td class="col-score">
-                                        <strong>@h.HomeScore–@h.AwayScore</strong>
+                                        @if (h.HomeScore.HasValue && h.AwayScore.HasValue)
+                                        {
+                                            <strong>@h.HomeScore–@h.AwayScore</strong>
+                                        }
+                                        else if (h.IsLive)
+                                        {
+                                            <span class="history-live-score">—</span>
+                                        }
+                                        else
+                                        {
+                                            <span>—</span>
+                                        }
                                     </td>
                                     <td class="col-pred @PredClass(h)">
                                         @h.PredictedHomeScore–@h.PredictedAwayScore
                                     </td>
-                                    <td class="col-pts total">@(h.PointsAwarded ?? 0)</td>
+                                    <td class="col-pts total">@(h.PointsAwarded?.ToString() ?? (h.IsLive ? "…" : "0"))</td>
                                     <td class="col-pts sub">@(h.BasePoints ?? 0)</td>
                                     <td class="col-pts sub">@(h.TeamBonusPoints ?? 0)</td>
                                     <td class="col-pts sub">@(h.PlayerGoalPoints ?? 0)</td>
@@ -368,9 +383,10 @@ else
                 </div>
 
                 <div class="history-summary">
-                    <span>Zakończonych meczów z typem: <strong>@_profile.PredictionHistory.Count</strong></span>
-                    <span>Trafionych wyników: <strong>@_profile.PredictionHistory.Count(h => h.BasePoints is > 0)</strong></span>
-                    <span>Dokładnych wyników: <strong>@_profile.PredictionHistory.Count(h => h.PointsAwarded >= 5)</strong></span>
+                    <span>Meczów na żywo z typem: <strong>@_profile.PredictionHistory.Count(h => h.IsLive)</strong></span>
+                    <span>Zakończonych meczów z typem: <strong>@_profile.PredictionHistory.Count(h => !h.IsLive)</strong></span>
+                    <span>Trafionych wyników: <strong>@_profile.PredictionHistory.Count(h => !h.IsLive && h.BasePoints is > 0)</strong></span>
+                    <span>Dokładnych wyników: <strong>@_profile.PredictionHistory.Count(h => !h.IsLive && h.PointsAwarded >= 5)</strong></span>
                 </div>
             }
         </div>
@@ -661,18 +677,45 @@ else
         1 => "🥇", 2 => "🥈", 3 => "🥉", _ => string.Empty
     };
 
-    private static string PtsClass(int? pts) => pts switch
+    private static string HistoryRowClass(UserPredictionHistoryDto h)
     {
-        >= 5 => "high", >= 1 => "mid", _ => "low"
-    };
+        if (h.IsLive) return "live";
+        return IsPredictionHit(h) ? "high" : "low";
+    }
 
     private static string PredClass(UserPredictionHistoryDto h)
     {
-        if (h.PointsAwarded is null) return string.Empty;
-        if (h.PredictedHomeScore == h.HomeScore && h.PredictedAwayScore == h.AwayScore)
-            return "pred--exact";
-        if (h.BasePoints is > 0)
-            return "pred--correct";
-        return "pred--wrong";
+        if (IsExactScore(h))
+            return "pred--hit";
+
+        if (IsPredictionHit(h))
+            return "pred--hit";
+
+        if (h.PointsAwarded is 0)
+            return "pred--wrong";
+
+        return string.Empty;
+    }
+
+    private static bool IsExactScore(UserPredictionHistoryDto h) =>
+        h.HomeScore.HasValue
+        && h.AwayScore.HasValue
+        && h.PredictedHomeScore == h.HomeScore
+        && h.PredictedAwayScore == h.AwayScore;
+
+    private static bool IsPredictionHit(UserPredictionHistoryDto h)
+    {
+        if (h.PointsAwarded is >= 1) return true;
+        if (h.BasePoints is >= 1) return true;
+        return IsOutcomeMatch(h);
+    }
+
+    private static bool IsOutcomeMatch(UserPredictionHistoryDto h)
+    {
+        if (!h.HomeScore.HasValue || !h.AwayScore.HasValue)
+            return false;
+
+        return Math.Sign(h.PredictedHomeScore - h.PredictedAwayScore)
+            == Math.Sign(h.HomeScore.Value - h.AwayScore.Value);
     }
 }

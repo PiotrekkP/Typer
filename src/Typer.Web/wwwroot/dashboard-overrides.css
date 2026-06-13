@@ -160,3 +160,13 @@
         align-self: center;
     }
 }
+
+/* Wyniki — flagi SVG muszą mieć stały rozmiar */
+.results-page .results-flag {
+    width: 28px !important;
+    height: 20px !important;
+    max-width: 28px;
+    max-height: 20px;
+    object-fit: cover;
+    flex-shrink: 0;
+}

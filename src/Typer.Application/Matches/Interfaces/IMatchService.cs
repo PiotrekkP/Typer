@@ -1,4 +1,5 @@
 using Typer.Application.Common.Models;
+using Typer.Application.Matches;
 using Typer.Application.Matches.DTOs;
 
 namespace Typer.Application.Matches.Interfaces;
@@ -7,6 +8,7 @@ public interface IMatchService
 {
     Task<IReadOnlyList<RoundWithMatchesDto>> GetRoundsWithMatchesAsync(
         string? userId = null,
+        MatchRoundsScope scope = MatchRoundsScope.Active,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -29,4 +31,11 @@ public interface IMatchService
         CancellationToken cancellationToken = default);
 
     Task<bool> HasInProgressMatchesAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ResultsMatchOptionDto>> GetResultsMatchOptionsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<MatchPredictionResultDto>> GetMatchPredictionResultsAsync(
+        Guid matchId,
+        CancellationToken cancellationToken = default);
 }
