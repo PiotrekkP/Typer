@@ -90,7 +90,14 @@
                                     {
                                         <img src="@entry.TeamFlagUrl" alt="@entry.TeamName" class="table-flag" />
                                     }
-                                    <span>@(entry.TeamName ?? "—")</span>
+                                    @if (entry.TeamId is not null && !string.IsNullOrEmpty(entry.TeamName))
+                                    {
+                                        <a href="/statystyki/druzyna/@entry.TeamId" class="team-link">@entry.TeamName</a>
+                                    }
+                                    else
+                                    {
+                                        <span>@(entry.TeamName ?? "—")</span>
+                                    }
                                 </span>
                             </td>
                             <td class="col-player-name">@(entry.PlayerName ?? "—")</td>

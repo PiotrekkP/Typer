@@ -46,5 +46,5 @@ public class RankingDeltaRulesTests
     }
 
     private static RankingEntryDto Entry(string userId, int points, int position) =>
-        new(position, userId, userId, null, null, null, points, 0, 0, 0, 0);
+        new(position, userId, userId, null, null, null, null, points, 0, 0, 0, 0);
 }

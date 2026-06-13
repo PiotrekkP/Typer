@@ -75,6 +75,7 @@ public class RankingService : IRankingService
                 {
                     p.UserId,
                     p.DisplayName,
+                    TeamId      = p.SelectedTeamId,
                     TeamName    = p.SelectedTeam != null ? p.SelectedTeam.Name : null,
                     TeamFlagUrl = p.SelectedTeam != null ? p.SelectedTeam.FlagUrl : null,
                     PlayerName  = p.SelectedPlayer != null
@@ -93,6 +94,7 @@ public class RankingService : IRankingService
                     index + 1,
                     entry.UserId,
                     entry.DisplayName,
+                    entry.TeamId,
                     entry.TeamName,
                     entry.TeamFlagUrl,
                     entry.PlayerName,

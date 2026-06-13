@@ -76,8 +76,10 @@ public class UserProfileService : IUserProfileService
             .OrderByDescending(p => p.Match.KickOffUtc)
             .Select(p => new UserPredictionHistoryDto(
                 p.MatchId,
+                p.Match.HomeTeamId,
                 p.Match.HomeTeam.Name,
                 p.Match.HomeTeam.FlagUrl,
+                p.Match.AwayTeamId,
                 p.Match.AwayTeam.Name,
                 p.Match.AwayTeam.FlagUrl,
                 p.Match.KickOffUtc,

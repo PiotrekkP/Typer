@@ -118,7 +118,14 @@ else
                         <div class="selection-details">
                             <span class="selection-label">Reprezentacja</span>
                             <span class="selection-value">
-                                @(_profile.SelectedTeamName ?? (_isOwnProfile ? "Nie wybrano" : "—"))
+                                @if (_profile.SelectedTeamId is not null && _profile.SelectedTeamName is not null)
+                                {
+                                    <a href="/statystyki/druzyna/@_profile.SelectedTeamId" class="team-link">@_profile.SelectedTeamName</a>
+                                }
+                                else
+                                {
+                                    @(_profile.SelectedTeamName ?? (_isOwnProfile ? "Nie wybrano" : "—"))
+                                }
                             </span>
                         </div>
                     </div>
@@ -346,9 +353,13 @@ else
                                             {
                                                 <img src="@h.HomeTeamFlagUrl" alt="" class="hist-flag" />
                                             }
-                                            <span class="team-name">@h.HomeTeamName</span>
+                                            <span class="team-name">
+                                                <a href="/statystyki/druzyna/@h.HomeTeamId" class="team-link">@h.HomeTeamName</a>
+                                            </span>
                                             <span class="vs">vs</span>
-                                            <span class="team-name">@h.AwayTeamName</span>
+                                            <span class="team-name">
+                                                <a href="/statystyki/druzyna/@h.AwayTeamId" class="team-link">@h.AwayTeamName</a>
+                                            </span>
                                             @if (!string.IsNullOrEmpty(h.AwayTeamFlagUrl))
                                             {
                                                 <img src="@h.AwayTeamFlagUrl" alt="" class="hist-flag" />

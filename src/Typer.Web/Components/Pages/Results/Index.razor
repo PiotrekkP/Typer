@@ -45,7 +45,9 @@
                     {
                         <img src="@_selectedMatch.HomeTeamFlagUrl" alt="" class="results-flag" width="28" height="20" />
                     }
-                    <span class="results-team-name">@_selectedMatch.HomeTeamName</span>
+                    <span class="results-team-name">
+                        <a href="/statystyki/druzyna/@_selectedMatch.HomeTeamId" class="team-link">@_selectedMatch.HomeTeamName</a>
+                    </span>
                     <span class="results-score">
                         @if (_selectedMatch.HomeScore.HasValue && _selectedMatch.AwayScore.HasValue)
                         {
@@ -56,7 +58,9 @@
                             <text>vs</text>
                         }
                     </span>
-                    <span class="results-team-name">@_selectedMatch.AwayTeamName</span>
+                    <span class="results-team-name">
+                        <a href="/statystyki/druzyna/@_selectedMatch.AwayTeamId" class="team-link">@_selectedMatch.AwayTeamName</a>
+                    </span>
                     @if (!string.IsNullOrEmpty(_selectedMatch.AwayTeamFlagUrl))
                     {
                         <img src="@_selectedMatch.AwayTeamFlagUrl" alt="" class="results-flag" width="28" height="20" />
@@ -106,15 +110,15 @@
                         {
                             var row = _predictions[i];
                             <tr class="results-row results-row--@RowClass(row)">
-                                <td class="col-pos">@(i + 1)</td>
-                                <td class="col-player">
+                                <td class="results-col-pos">@(i + 1)</td>
+                                <td class="results-col-player">
                                     <a href="/gracz/@row.UserId" class="results-player-link">@row.DisplayName</a>
                                 </td>
-                                <td class="col-pred">@FormatPrediction(row)</td>
-                                <td class="col-pts total">@FormatPoints(row.PointsAwarded, _selectedMatch?.Status)</td>
-                                <td class="col-pts sub">@(row.BasePoints ?? 0)</td>
-                                <td class="col-pts sub">@(row.TeamBonusPoints ?? 0)</td>
-                                <td class="col-pts sub">@(row.PlayerGoalPoints ?? 0)</td>
+                                <td class="results-col-pred">@FormatPrediction(row)</td>
+                                <td class="results-col-pts results-col-pts--total">@FormatPoints(row.PointsAwarded, _selectedMatch?.Status)</td>
+                                <td class="results-col-pts">@(row.BasePoints ?? 0)</td>
+                                <td class="results-col-pts">@(row.TeamBonusPoints ?? 0)</td>
+                                <td class="results-col-pts">@(row.PlayerGoalPoints ?? 0)</td>
                             </tr>
                         }
                     </tbody>

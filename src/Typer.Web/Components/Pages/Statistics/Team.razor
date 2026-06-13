@@ -64,7 +64,7 @@ else
                                 <tr class="standings-row @(isCurrent ? "standings-row--current" : "")">
                                     <td class="col-pos">@pos</td>
                                     <td class="col-team">
-                                        <a href="/statystyki/druzyna/@row.TeamId" class="standings-team-link">
+                                        <a href="/statystyki/druzyna/@row.TeamId" class="standings-team-link team-link">
                                             @if (!string.IsNullOrEmpty(row.FlagUrl))
                                             {
                                                 <img src="@row.FlagUrl" alt="" class="standings-flag" />

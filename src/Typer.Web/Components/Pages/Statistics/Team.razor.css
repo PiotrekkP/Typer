@@ -137,18 +137,25 @@
     color: #111827;
 }
 
-.standings-team-link {
+.standings-team-link,
+.standings-team-link:link,
+.standings-team-link:visited,
+.standings-team-link:hover,
+.standings-team-link:active,
+.standings-table a.team-link,
+.standings-table a.team-link:hover,
+.standings-table a.team-link:visited {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: #111827;
-    text-decoration: none;
-    font-weight: 500;
+    font-weight: 700;
+    text-decoration: none !important;
+    color: inherit;
 }
 
-.standings-team-link:hover {
+.standings-team-link:hover,
+.standings-table a.team-link:hover {
     color: #1d4ed8;
-    text-decoration: underline;
 }
 
 .standings-flag {

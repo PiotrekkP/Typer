@@ -15,8 +15,10 @@ public record UserSelectionDto(
 
 public record UserPredictionHistoryDto(
     Guid MatchId,
+    Guid HomeTeamId,
     string HomeTeamName,
     string? HomeTeamFlagUrl,
+    Guid AwayTeamId,
     string AwayTeamName,
     string? AwayTeamFlagUrl,
     DateTime KickOffUtc,

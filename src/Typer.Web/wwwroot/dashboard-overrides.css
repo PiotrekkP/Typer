@@ -62,7 +62,7 @@
 }
 
 .dash-widget--recent .recent-result__name {
-    font-weight: 500;
+    font-weight: 700;
     color: #374151;
     font-size: 0.8rem;
     white-space: nowrap;
@@ -161,6 +161,55 @@
     }
 }
 
+/* MatchCard — linki drużyn bez podkreślenia (Typuj, Wyniki) */
+.match-card a.match-team__name,
+.match-card a.match-team__name:hover,
+.match-card a.match-team__name:visited,
+.match-card a.match-team__name:active {
+    text-decoration: none !important;
+    font-weight: 700 !important;
+}
+
+.match-card a.match-team__name:hover {
+    color: #1d4ed8 !important;
+}
+
+/* Profil i ranking — linki drużyn bez podkreślenia */
+.profile-page a.team-link,
+.profile-page a.team-link:hover,
+.profile-page a.team-link:visited,
+.ranking-page a.team-link,
+.ranking-page a.team-link:hover,
+.ranking-page a.team-link:visited {
+    text-decoration: none !important;
+    font-weight: 700 !important;
+}
+
+.profile-page a.team-link:hover,
+.ranking-page a.team-link:hover {
+    color: #1d4ed8 !important;
+}
+
+/* Statystyki — linki drużyn w tabelach i siatce bez podkreślenia */
+.team-stats-page .standings-table a,
+.team-stats-page .standings-table a:hover,
+.team-stats-page .standings-table a:visited,
+.stats-team-card,
+.stats-team-card:hover,
+.stats-team-card:visited {
+    text-decoration: none !important;
+    font-weight: 700 !important;
+}
+
+.team-stats-page .standings-table a:hover,
+.stats-team-card:hover {
+    color: #1d4ed8;
+}
+
+.stats-team-card:hover .stats-team-card__name {
+    color: #1d4ed8;
+}
+
 /* Wyniki — flagi SVG muszą mieć stały rozmiar */
 .results-page .results-flag {
     width: 28px !important;
@@ -169,4 +218,25 @@
     max-height: 20px;
     object-fit: cover;
     flex-shrink: 0;
+}
+
+/* Wyniki / Historia — linki drużyn bez podkreślenia */
+.results-page a.team-link,
+.results-page a.team-link:hover,
+.results-page a.team-link:visited {
+    text-decoration: none !important;
+    font-weight: 700 !important;
+}
+
+.results-page a.team-link:hover {
+    color: #1d4ed8 !important;
+}
+
+/* Tabela typów — wyrównanie kolumn punktów (nadpisuje ewentualne konflikty) */
+.results-page .results-table .results-col-pts,
+.results-page .results-table th:nth-child(4),
+.results-page .results-table th:nth-child(5),
+.results-page .results-table th:nth-child(6),
+.results-page .results-table th:nth-child(7) {
+    text-align: center !important;
 }

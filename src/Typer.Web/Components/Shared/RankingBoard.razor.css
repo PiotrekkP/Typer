@@ -233,6 +233,20 @@
     text-decoration: underline;
 }
 
+.col-team a.team-link,
+.col-team a.team-link:link,
+.col-team a.team-link:visited,
+.col-team a.team-link:hover,
+.col-team a.team-link:active {
+    text-decoration: none !important;
+    color: inherit;
+    font-weight: 700;
+}
+
+.col-team a.team-link:hover {
+    color: #1d4ed8;
+}
+
 a.podium__name {
     color: inherit;
     text-decoration: none;
