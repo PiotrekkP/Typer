@@ -24,9 +24,15 @@
         </p>
         @if (_ranking is not null && _ranking.Count > 0)
         {
-            <button type="button" class="ranking-refresh-btn" disabled="@_refreshing" @onclick="ManualRefreshAsync">
-                @(_refreshing ? "Odświeżanie…" : "Odśwież teraz")
-            </button>
+            <div class="ranking-actions">
+                <button type="button" class="ranking-refresh-btn" disabled="@_refreshing" @onclick="ManualRefreshAsync">
+                    @(_refreshing ? "Odświeżanie…" : "Odśwież teraz")
+                </button>
+                <button type="button" class="ranking-refresh-btn ranking-refresh-btn--secondary" disabled="@_refreshing" @onclick="ResetBaselineAsync">
+                    Ustaw stan odniesienia
+                </button>
+            </div>
+            <p class="ranking-hint">Test lokalny: ustaw stan odniesienia → zmień wynik/punkty → odśwież. W Δ pojawi się ↑/↓.</p>
         }
     </div>
 
@@ -56,7 +62,9 @@
                         <div class="podium__points">@entry.TotalPoints pkt</div>
                         @if (delta is not null)
                         {
-                            <span class="position-delta position-delta--@(delta > 0 ? "up" : "down")">@FormatDelta(delta.Value)</span>
+                            <span class="position-delta position-delta--@(delta > 0 ? "up" : "down")">
+                                <span class="position-delta__arrow">@(delta > 0 ? "↑" : "↓")</span><span class="position-delta__num">@Math.Abs(delta.Value)</span>
+                            </span>
                         }
                     </div>
                 }
@@ -83,13 +91,7 @@
                     @foreach (var entry in _ranking)
                     {
                         var positionDelta = GetDelta(entry.UserId);
-                        var rowClass = positionDelta switch
-                        {
-                            > 0 => "moved-up",
-                            < 0 => "moved-down",
-                            _ => MedalClass(entry.Position)
-                        };
-                        <tr class="ranking-row ranking-row--@rowClass">
+                        <tr class="ranking-row ranking-row--@MedalClass(entry.Position)">
                             <td class="col-pos">
                                 <span class="position-badge position-badge--@MedalClass(entry.Position)">
                                     @(entry.Position <= 3 ? MedalIcon(entry.Position) : entry.Position.ToString())
@@ -99,7 +101,9 @@
                                 @if (positionDelta is int delta)
                                 {
                                     <span class="position-delta position-delta--@(delta > 0 ? "up" : "down")"
-                                          title="Zmiana pozycji od poprzedniego odświeżenia">@FormatDelta(delta)</span>
+                                          title="Zmiana pozycji od poprzedniego odświeżenia">
+                                        <span class="position-delta__arrow">@(delta > 0 ? "↑" : "↓")</span><span class="position-delta__num">@Math.Abs(delta)</span>
+                                    </span>
                                 }
                                 else
                                 {
@@ -190,17 +194,33 @@
 
         var fresh = await RankingService.GetLeaderboardAsync(VipOnly);
         _liveRefreshActive = await MatchService.HasInProgressMatchesAsync();
+        _ranking = fresh;
+
+        var activity = HasRankingActivity(_previousSnapshot, fresh);
+        if (!activity)
+            return;
 
         var newDeltas = ComputeDeltas(_previousSnapshot, fresh);
-        var activity = HasRankingActivity(_previousSnapshot, fresh);
-
         if (newDeltas.Count > 0)
             _positionDeltas = newDeltas;
-        else if (activity)
+        else
             _positionDeltas.Clear();
 
         _previousSnapshot = RankingSnapshot.From(fresh);
-        _ranking = fresh;
+    }
+
+    private async Task ResetBaselineAsync()
+    {
+        _refreshing = true;
+        try
+        {
+            await CaptureBaselineAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+        finally
+        {
+            _refreshing = false;
+        }
     }
 
     private async Task ManualRefreshAsync()
@@ -221,20 +241,45 @@
         RankingSnapshot previous,
         IReadOnlyList<RankingEntryDto> current)
     {
-        var deltas = new Dictionary<string, int>();
+        var oldRanks = ComputeRanks(current, previous.Points);
+        var newRanks = ComputeRanks(current);
+        var deltas = new Dictionary<string, int>(StringComparer.Ordinal);
 
         foreach (var entry in current)
         {
-            if (!previous.Positions.TryGetValue(entry.UserId, out var oldPosition))
+            if (!oldRanks.TryGetValue(entry.UserId, out var oldPosition))
+                continue;
+            if (!newRanks.TryGetValue(entry.UserId, out var newPosition))
                 continue;
 
-            var delta = oldPosition - entry.Position;
+            var delta = oldPosition - newPosition;
             if (delta != 0)
                 deltas[entry.UserId] = delta;
         }
 
         return deltas;
     }
+
+    private static Dictionary<string, int> ComputeRanks(
+        IReadOnlyList<RankingEntryDto> entries,
+        Dictionary<string, int> pointsByUser)
+    {
+        var ranks = new Dictionary<string, int>(StringComparer.Ordinal);
+        var ordered = entries
+            .Select(e => (e.UserId, e.DisplayName, Points: pointsByUser.GetValueOrDefault(e.UserId, e.TotalPoints)))
+            .OrderByDescending(x => x.Points)
+            .ThenBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.UserId, StringComparer.Ordinal)
+            .ToList();
+
+        for (var i = 0; i < ordered.Count; i++)
+            ranks[ordered[i].UserId] = i + 1;
+
+        return ranks;
+    }
+
+    private static Dictionary<string, int> ComputeRanks(IReadOnlyList<RankingEntryDto> entries) =>
+        ComputeRanks(entries, entries.ToDictionary(e => e.UserId, e => e.TotalPoints, StringComparer.Ordinal));
 
     private static bool HasRankingActivity(
         RankingSnapshot previous,
@@ -292,9 +337,6 @@
         return delta;
     }
 
-    private static string FormatDelta(int delta) =>
-        delta > 0 ? $"↑{delta}" : $"↓{Math.Abs(delta)}";
-
     public async ValueTask DisposeAsync()
     {
         StopRefreshTimer();
@@ -317,13 +359,9 @@
         _ => "other"
     };
 
-    private sealed record RankingSnapshot(
-        Dictionary<string, int> Positions,
-        Dictionary<string, int> Points)
+    private sealed record RankingSnapshot(Dictionary<string, int> Points)
     {
         public static RankingSnapshot From(IReadOnlyList<RankingEntryDto> entries) =>
-            new(
-                entries.ToDictionary(e => e.UserId, e => e.Position, StringComparer.Ordinal),
-                entries.ToDictionary(e => e.UserId, e => e.TotalPoints, StringComparer.Ordinal));
+            new(entries.ToDictionary(e => e.UserId, e => e.TotalPoints, StringComparer.Ordinal));
     }
 }

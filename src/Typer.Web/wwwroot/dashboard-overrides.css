@@ -160,22 +160,3 @@
         align-self: center;
     }
 }
-
-/* Ranking — kolumna Δ (globalnie, poza scoped CSS) */
-.ranking-table .position-delta--up {
-    color: #fff !important;
-    background: #059669 !important;
-}
-
-.ranking-table .position-delta--down {
-    color: #fff !important;
-    background: #dc2626 !important;
-}
-
-.ranking-row--moved-up td {
-    background-color: #ecfdf5 !important;
-}
-
-.ranking-row--moved-down td {
-    background-color: #fef2f2 !important;
-}
