@@ -257,7 +257,7 @@ a.match-team__name:hover {
 
 .prediction-value          { font-weight: 700; font-size: 1rem; }
 .prediction-value--exact   { color: #15803d; }
-.prediction-value--correct { color: #1d4ed8; }
+.prediction-value--correct { color: #15803d; }
 .prediction-value--wrong   { color: #b91c1c; }
 
 .prediction-empty { color: #9ca3af; font-style: italic; font-size: 0.85rem; }

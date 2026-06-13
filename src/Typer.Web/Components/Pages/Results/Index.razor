@@ -213,7 +213,7 @@
         points?.ToString() ?? (status == "InProgress" ? "…" : "0");
 
     private static string RowClass(MatchPredictionResultDto row) =>
-        row.PointsAwarded switch
+        (row.BasePoints ?? row.PointsAwarded) switch
         {
             >= 5 => "high",
             >= 1 => "hit",

@@ -337,23 +337,52 @@
     {
         get
         {
-            if (Match.PredictionStatus != "Scored" || !Match.PointsAwarded.HasValue)
+            if (Match.PredictionStatus != "Scored")
                 return string.Empty;
-            return Match.PointsAwarded.Value switch
-            {
-                >= 3 => "prediction-value--exact",
-                1    => "prediction-value--correct",
-                _    => "prediction-value--wrong"
-            };
+
+            if (IsExactScore())
+                return "prediction-value--exact";
+
+            if (IsScoreOutcomeHit())
+                return "prediction-value--correct";
+
+            if (Match.BasePoints is 0 || Match.PointsAwarded is 0)
+                return "prediction-value--wrong";
+
+            return string.Empty;
         }
     }
 
-    private string PointsBadgeClass => Match.PointsAwarded switch
+    private bool IsExactScore() =>
+        Match.HomeScore.HasValue
+        && Match.AwayScore.HasValue
+        && Match.PredictedHomeScore.HasValue
+        && Match.PredictedAwayScore.HasValue
+        && Match.PredictedHomeScore == Match.HomeScore
+        && Match.PredictedAwayScore == Match.AwayScore;
+
+    private bool IsScoreOutcomeHit()
     {
-        >= 3 => "exact",
-        >= 1 => "correct",
-        _    => "wrong"
-    };
+        if (Match.BasePoints is >= 1)
+            return true;
+
+        return IsOutcomeMatch();
+    }
+
+    private bool IsOutcomeMatch()
+    {
+        if (!Match.HomeScore.HasValue || !Match.AwayScore.HasValue
+            || !Match.PredictedHomeScore.HasValue || !Match.PredictedAwayScore.HasValue)
+            return false;
+
+        return Math.Sign(Match.PredictedHomeScore.Value - Match.PredictedAwayScore.Value)
+            == Math.Sign(Match.HomeScore.Value - Match.AwayScore.Value);
+    }
+
+    private string PointsBadgeClass =>
+        IsExactScore() ? "exact"
+        : IsScoreOutcomeHit() ? "correct"
+        : "wrong";
 
     private bool HasBreakdown =>
         Match.BasePoints.HasValue ||
