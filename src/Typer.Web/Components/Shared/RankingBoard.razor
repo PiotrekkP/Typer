@@ -22,7 +22,6 @@
             <div class="podium">
                 @foreach (var entry in _ranking.Take(Math.Min(3, _ranking.Count)))
                 {
-                    var delta = GetDelta(entry.UserId);
                     <div class="podium__place podium__place--@entry.Position">
                         <div class="podium__medal">@MedalIcon(entry.Position)</div>
                         @if (!string.IsNullOrEmpty(entry.TeamFlagUrl))
@@ -31,10 +30,10 @@
                         }
                         <a href="/gracz/@entry.UserId" class="podium__name">@entry.DisplayName</a>
                         <div class="podium__points">@entry.TotalPoints pkt</div>
-                        @if (delta is not null)
+                        @if (GetPositionDelta(entry.UserId) is int positionDelta)
                         {
-                            <span class="position-delta position-delta--@(delta > 0 ? "up" : "down")">
-                                <span class="position-delta__arrow">@(delta > 0 ? "↑" : "↓")</span><span class="position-delta__num">@Math.Abs(delta.Value)</span>
+                            <span class="position-delta position-delta--@(positionDelta > 0 ? "up" : "down")">
+                                <span class="position-delta__arrow">@(positionDelta > 0 ? "↑" : "↓")</span><span class="position-delta__num">@Math.Abs(positionDelta)</span>
                             </span>
                         }
                     </div>
@@ -51,7 +50,7 @@
                         <th class="col-player">Gracz</th>
                         <th class="col-team">Reprezentacja</th>
                         <th class="col-player-name">Zawodnik</th>
-                        <th class="col-pts" title="Łączne punkty">Suma</th>
+                        <th class="col-pts col-pts--total" title="Łączne punkty">Suma</th>
                         <th class="col-pts col-pts--sub" title="Punkty z typowania wyników">⚽ Typy</th>
                         <th class="col-pts col-pts--sub" title="Bonus za drużynę (×2)">★ Drużyna</th>
                         <th class="col-pts col-pts--sub" title="Gole ulubionego zawodnika">👟 Gole</th>
@@ -61,7 +60,6 @@
                 <tbody>
                     @foreach (var entry in _ranking)
                     {
-                        var positionDelta = GetDelta(entry.UserId);
                         <tr class="ranking-row ranking-row--@MedalClass(entry.Position)">
                             <td class="col-pos">
                                 <span class="position-badge position-badge--@MedalClass(entry.Position)">
@@ -69,11 +67,11 @@
                                 </span>
                             </td>
                             <td class="col-delta">
-                                @if (positionDelta is int delta)
+                                @if (GetPositionDelta(entry.UserId) is int positionDelta)
                                 {
-                                    <span class="position-delta position-delta--@(delta > 0 ? "up" : "down")"
+                                    <span class="position-delta position-delta--@(positionDelta > 0 ? "up" : "down")"
                                           title="Zmiana pozycji od rozpoczęcia meczu(ów) na żywo">
-                                        <span class="position-delta__arrow">@(delta > 0 ? "↑" : "↓")</span><span class="position-delta__num">@Math.Abs(delta)</span>
+                                        <span class="position-delta__arrow">@(positionDelta > 0 ? "↑" : "↓")</span><span class="position-delta__num">@Math.Abs(positionDelta)</span>
                                     </span>
                                 }
                                 else
@@ -101,7 +99,19 @@
                                 </span>
                             </td>
                             <td class="col-player-name">@(entry.PlayerName ?? "—")</td>
-                            <td class="col-pts total-pts">@entry.TotalPoints</td>
+                            <td class="col-pts total-pts @(_liveSessionActive ? "total-pts--live" : "")">
+                                <div class="total-pts__row @(_liveSessionActive ? "total-pts__row--live" : "total-pts__row--solo")">
+                                    <span class="total-pts__value">@entry.TotalPoints</span>
+                                    @if (_liveSessionActive)
+                                    {
+                                        var liveDelta = GetLivePointDelta(entry.UserId);
+                                        <span class="points-delta @GetPointDeltaClass(liveDelta)"
+                                              title="Punkty zdobyte od rozpoczęcia meczu(ów) na żywo">
+                                            @FormatLivePointDelta(liveDelta)
+                                        </span>
+                                    }
+                                </div>
+                            </td>
                             <td class="col-pts sub-pts">@entry.PredictionPoints</td>
                             <td class="col-pts sub-pts">@entry.TeamBonusPoints</td>
                             <td class="col-pts sub-pts">@entry.PlayerGoalPoints</td>
@@ -117,7 +127,11 @@
             <span>★ Drużyna — bonus ×2 za mecze ulubionej reprezentacji</span>
             <span>👟 Gole — +3 pkt za każdy gol ulubionego zawodnika</span>
             <span>🏆 Mistrz — +20 pkt jeśli Twoja drużyna wygra turniej</span>
-            <span>↑↓ — zmiana pozycji od rozpoczęcia bieżących meczów na żywo</span>
+            @if (_liveSessionActive)
+            {
+                <span>↑↓ — zmiana pozycji od rozpoczęcia bieżących meczów na żywo</span>
+                <span>+N przy sumie — punkty zdobyte w bieżącej sesji na żywo</span>
+            }
         </div>
     }
 
@@ -129,6 +143,8 @@
 
     private IReadOnlyList<RankingEntryDto>? _ranking;
     private Dictionary<string, int> _positionDeltas = new();
+    private Dictionary<string, int> _pointDeltas = new();
+    private bool _liveSessionActive;
 
     private PeriodicTimer? _refreshTimer;
     private CancellationTokenSource? _refreshCts;
@@ -148,7 +164,12 @@
     {
         var snapshot = await RankingService.GetLeaderboardSnapshotAsync(VipOnly);
         _ranking = snapshot.Entries;
+        _liveSessionActive = snapshot.LiveSessionActive;
         _positionDeltas = snapshot.PositionDeltas.ToDictionary(
+            static pair => pair.Key,
+            static pair => pair.Value,
+            StringComparer.Ordinal);
+        _pointDeltas = snapshot.PointDeltas.ToDictionary(
             static pair => pair.Key,
             static pair => pair.Value,
             StringComparer.Ordinal);
@@ -186,13 +207,24 @@
         catch (OperationCanceledException) { }
     }
 
-    private int? GetDelta(string userId)
+    private int? GetPositionDelta(string userId)
     {
         if (!_positionDeltas.TryGetValue(userId, out var delta) || delta == 0)
             return null;
 
         return delta;
     }
+
+    private int GetLivePointDelta(string userId) =>
+        _pointDeltas.GetValueOrDefault(userId, 0);
+
+    private static string FormatLivePointDelta(int delta) =>
+        delta > 0 ? $"+{delta}" : delta == 0 ? "+0" : delta.ToString();
+
+    private static string GetPointDeltaClass(int delta) =>
+        delta > 0 ? "points-delta--gain"
+        : delta < 0 ? "points-delta--loss"
+        : "points-delta--zero";
 
     public async ValueTask DisposeAsync()
     {

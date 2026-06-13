@@ -26,6 +26,38 @@ public class RankingDeltaRulesTests
     }
 
     [Fact]
+    public void ComputePointDeltas_ReturnsGainSinceBaseline()
+    {
+        var baseline = new Dictionary<string, int>
+        {
+            ["a"] = 10,
+            ["b"] = 8
+        };
+
+        var current = new List<RankingEntryDto>
+        {
+            Entry("a", 10, 1),
+            Entry("b", 11, 2)
+        };
+
+        var deltas = RankingDeltaRules.ComputePointDeltas(baseline, current);
+
+        Assert.Equal(3, deltas["b"]);
+        Assert.False(deltas.ContainsKey("a"));
+    }
+
+    [Fact]
+    public void ComputePointDeltas_OmitsUsersNotInBaseline()
+    {
+        var baseline = new Dictionary<string, int> { ["a"] = 10 };
+        var current = new List<RankingEntryDto> { Entry("b", 5, 1) };
+
+        var deltas = RankingDeltaRules.ComputePointDeltas(baseline, current);
+
+        Assert.Empty(deltas);
+    }
+
+    [Fact]
     public void ComputeDeltas_OmitsUsersWithNoPositionChange()
     {
         var baseline = new Dictionary<string, int>

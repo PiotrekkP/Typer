@@ -27,6 +27,25 @@ public static class RankingDeltaRules
         return deltas;
     }
 
+    public static Dictionary<string, int> ComputePointDeltas(
+        IReadOnlyDictionary<string, int> baselinePoints,
+        IReadOnlyList<RankingEntryDto> current)
+    {
+        var deltas = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        foreach (var entry in current)
+        {
+            if (!baselinePoints.TryGetValue(entry.UserId, out var baseline))
+                continue;
+
+            var delta = entry.TotalPoints - baseline;
+            if (delta != 0)
+                deltas[entry.UserId] = delta;
+        }
+
+        return deltas;
+    }
+
     public static Dictionary<string, int> ComputeRanks(
         IReadOnlyList<RankingEntryDto> entries,
         IReadOnlyDictionary<string, int> pointsByUser)

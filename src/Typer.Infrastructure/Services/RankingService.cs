@@ -10,10 +10,14 @@ namespace Typer.Infrastructure.Services;
 public class RankingService : IRankingService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
+    private readonly IRankingLiveBaselineService _rankingLiveBaselineService;
 
-    public RankingService(IDbContextFactory<ApplicationDbContext> contextFactory)
+    public RankingService(
+        IDbContextFactory<ApplicationDbContext> contextFactory,
+        IRankingLiveBaselineService rankingLiveBaselineService)
     {
         _contextFactory = contextFactory;
+        _rankingLiveBaselineService = rankingLiveBaselineService;
     }
 
     public async Task<LeaderboardSnapshotDto> GetLeaderboardSnapshotAsync(
@@ -27,21 +31,24 @@ public class RankingService : IRankingService
             .AnyAsync(m => m.Status == MatchStatus.InProgress, cancellationToken);
 
         if (!liveSessionActive)
-            return new LeaderboardSnapshotDto(entries, new Dictionary<string, int>(), false);
+            return new LeaderboardSnapshotDto(entries, new Dictionary<string, int>(), new Dictionary<string, int>(), false);
+
+        await _rankingLiveBaselineService.SyncWithLiveMatchesAsync(cancellationToken);
 
         var baseline = await context.RankingLiveBaselines
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.VipOnly == vipOnly && b.IsActive, cancellationToken);
 
         if (baseline is null)
-            return new LeaderboardSnapshotDto(entries, new Dictionary<string, int>(), false);
+            return new LeaderboardSnapshotDto(entries, new Dictionary<string, int>(), new Dictionary<string, int>(), true);
 
         var baselinePoints = RankingLiveBaselineService.DeserializePoints(baseline.PointsJson);
         if (baselinePoints is null || baselinePoints.Count == 0)
-            return new LeaderboardSnapshotDto(entries, new Dictionary<string, int>(), true);
+            return new LeaderboardSnapshotDto(entries, new Dictionary<string, int>(), new Dictionary<string, int>(), true);
 
-        var deltas = RankingDeltaRules.ComputeDeltas(baselinePoints, entries);
-        return new LeaderboardSnapshotDto(entries, deltas, true);
+        var positionDeltas = RankingDeltaRules.ComputeDeltas(baselinePoints, entries);
+        var pointDeltas = RankingDeltaRules.ComputePointDeltas(baselinePoints, entries);
+        return new LeaderboardSnapshotDto(entries, positionDeltas, pointDeltas, true);
     }
 
     public Task<IReadOnlyList<RankingEntryDto>> GetLeaderboardAsync(

@@ -3,4 +3,5 @@ namespace Typer.Application.Rankings.DTOs;
 public record LeaderboardSnapshotDto(
     IReadOnlyList<RankingEntryDto> Entries,
     IReadOnlyDictionary<string, int> PositionDeltas,
+    IReadOnlyDictionary<string, int> PointDeltas,
     bool LiveSessionActive);
