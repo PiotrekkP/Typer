@@ -148,6 +148,33 @@ public class MatchService : IMatchService
         return await MapToDetailDtos(context, matches, userId, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<MatchDetailDto>> GetTeamRecentMatchesAsync(
+        Guid teamId,
+        int count = 10,
+        string? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var candidates = await context.Matches
+            .Include(m => m.HomeTeam)
+            .Include(m => m.AwayTeam)
+            .Include(m => m.GoalScorers.OrderBy(g => g.Minute))
+            .Where(m => (m.HomeTeamId == teamId || m.AwayTeamId == teamId)
+                        && m.Status != MatchStatus.Cancelled)
+            .OrderByDescending(m => m.KickOffUtc)
+            .Take(Math.Max(count, 10) * 3)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        var matches = candidates
+            .Where(m => MatchesScope(m, MatchRoundsScope.Results))
+            .Take(count)
+            .ToList();
+
+        return await MapToDetailDtos(context, matches, userId, cancellationToken);
+    }
+
     private static async Task<IReadOnlyList<MatchDetailDto>> MapToDetailDtos(
         ApplicationDbContext context,
         List<Typer.Domain.Entities.Match> matches,

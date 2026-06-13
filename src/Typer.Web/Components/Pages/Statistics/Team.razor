@@ -1,0 +1,140 @@
+@page "/statystyki/druzyna/{TeamId:guid}"
+@using System.Security.Claims
+@inject ITeamService TeamService
+@inject AuthenticationStateProvider AuthStateProvider
+@using Typer.Application.Teams.DTOs
+
+<PageTitle>@PageTitleText — Typer</PageTitle>
+
+@if (_loading)
+{
+    <p class="loading">Ładowanie statystyk…</p>
+}
+else if (_stats is null)
+{
+    <div class="team-stats-not-found">
+        <p>Nie znaleziono reprezentacji.</p>
+        <a href="/statystyki">Wróć do statystyk</a>
+    </div>
+}
+else
+{
+    <div class="team-stats-page">
+        <a href="/statystyki" class="team-stats-back">← Wszystkie drużyny</a>
+
+        <header class="team-stats-header">
+            @if (!string.IsNullOrEmpty(_stats.Team.FlagUrl))
+            {
+                <img src="@_stats.Team.FlagUrl" alt="" class="team-stats-header__flag" />
+            }
+            <div class="team-stats-header__info">
+                <h1 class="team-stats-header__name">@_stats.Team.Name</h1>
+                @if (!string.IsNullOrEmpty(_stats.Team.GroupName))
+                {
+                    <span class="team-stats-header__group">Grupa @_stats.Team.GroupName</span>
+                }
+            </div>
+        </header>
+
+        @if (_stats.GroupStandings is not null)
+        {
+            <section class="team-stats-section">
+                <h2 class="team-stats-section__title">Tabela grupy @_stats.GroupStandings.GroupName</h2>
+                <div class="standings-table-wrapper">
+                    <table class="standings-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Drużyna</th>
+                                <th title="Mecze">M</th>
+                                <th title="Wygrane">W</th>
+                                <th title="Remisy">R</th>
+                                <th title="Porażki">P</th>
+                                <th title="Bramki">B</th>
+                                <th title="Bilans bramek">±</th>
+                                <th title="Punkty">Pkt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ var pos = 0; }
+                            @foreach (var row in _stats.GroupStandings.Rows)
+                            {
+                                pos++;
+                                var isCurrent = row.TeamId == _stats.Team.Id;
+                                <tr class="standings-row @(isCurrent ? "standings-row--current" : "")">
+                                    <td class="col-pos">@pos</td>
+                                    <td class="col-team">
+                                        <a href="/statystyki/druzyna/@row.TeamId" class="standings-team-link">
+                                            @if (!string.IsNullOrEmpty(row.FlagUrl))
+                                            {
+                                                <img src="@row.FlagUrl" alt="" class="standings-flag" />
+                                            }
+                                            <span>@row.Name</span>
+                                        </a>
+                                    </td>
+                                    <td>@row.Played</td>
+                                    <td>@row.Won</td>
+                                    <td>@row.Drawn</td>
+                                    <td>@row.Lost</td>
+                                    <td>@row.GoalsFor:@row.GoalsAgainst</td>
+                                    <td>@FormatGoalDiff(row.GoalDiff)</td>
+                                    <td class="col-pts"><strong>@row.Points</strong></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+
+        <section class="team-stats-section">
+            <h2 class="team-stats-section__title">Ostatnie mecze</h2>
+            @if (_stats.RecentMatches.Count == 0)
+            {
+                <p class="team-stats-empty">Brak rozpoczętych ani zakończonych meczów tej reprezentacji.</p>
+            }
+            else
+            {
+                <div class="team-stats-matches">
+                    @foreach (var match in _stats.RecentMatches)
+                    {
+                        <MatchCard Match="match"
+                                   IsAuthenticated="_isAuthenticated"
+                                   LinkTeams="true" />
+                    }
+                </div>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid TeamId { get; set; }
+
+    private TeamStatsPageDto? _stats;
+    private bool _loading = true;
+    private bool _isAuthenticated;
+    private string? _userId;
+    private Guid? _loadedTeamId;
+
+    private string PageTitleText => _stats?.Team.Name ?? "Statystyki drużyny";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedTeamId == TeamId && _stats is not null)
+            return;
+
+        _loadedTeamId = TeamId;
+        _loading = true;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        _userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        _stats = await TeamService.GetTeamStatsPageAsync(TeamId, _userId, recentMatchCount: 10);
+        _loading = false;
+    }
+
+    private static string FormatGoalDiff(int diff) =>
+        diff > 0 ? $"+{diff}" : diff.ToString();
+}

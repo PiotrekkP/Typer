@@ -26,7 +26,9 @@ else
             <div class="matches-list">
                 @foreach (var match in round.Matches)
                 {
-                    <MatchCard Match="match" IsAuthenticated="_isAuthenticated" />
+                    <MatchCard Match="match"
+                               IsAuthenticated="_isAuthenticated"
+                               LinkTeams="true" />
                 }
             </div>
         </section>

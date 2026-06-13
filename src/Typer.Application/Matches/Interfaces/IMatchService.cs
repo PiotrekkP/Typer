@@ -30,6 +30,12 @@ public interface IMatchService
         string? userId = null,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<MatchDetailDto>> GetTeamRecentMatchesAsync(
+        Guid teamId,
+        int count = 10,
+        string? userId = null,
+        CancellationToken cancellationToken = default);
+
     Task<bool> HasInProgressMatchesAsync(CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ResultsMatchOptionDto>> GetResultsMatchOptionsAsync(

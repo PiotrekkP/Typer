@@ -27,7 +27,7 @@
             {
                 <img src="@Match.HomeTeamFlagUrl" alt="@Match.HomeTeamName" class="match-team__flag" />
             }
-            <span class="match-team__name">@Match.HomeTeamName</span>
+            @TeamNameMarkup(Match.HomeTeamId, Match.HomeTeamName)
         </div>
 
         <div class="match-score">
@@ -42,7 +42,7 @@
         </div>
 
         <div class="match-team match-team--away">
-            <span class="match-team__name">@Match.AwayTeamName</span>
+            @TeamNameMarkup(Match.AwayTeamId, Match.AwayTeamName)
             @if (!string.IsNullOrEmpty(Match.AwayTeamFlagUrl))
             {
                 <img src="@Match.AwayTeamFlagUrl" alt="@Match.AwayTeamName" class="match-team__flag" />
@@ -170,6 +170,7 @@
 @code {
     [Parameter, EditorRequired] public MatchDetailDto Match { get; set; } = default!;
     [Parameter] public bool IsAuthenticated { get; set; }
+    [Parameter] public bool LinkTeams { get; set; }
     [Parameter] public EventCallback<(Guid MatchId, int Home, int Away)> OnPredictionSubmit { get; set; }
 
     private int? _predictedHome;
@@ -344,4 +345,23 @@
         Match.BasePoints.HasValue ||
         Match.TeamBonusPoints.HasValue ||
         Match.PlayerGoalPoints.HasValue;
+
+    private RenderFragment TeamNameMarkup(Guid teamId, string name) => builder =>
+    {
+        if (LinkTeams)
+        {
+            builder.OpenElement(0, "a");
+            builder.AddAttribute(1, "href", $"/statystyki/druzyna/{teamId}");
+            builder.AddAttribute(2, "class", "match-team__name match-team__link");
+            builder.AddContent(3, name);
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.OpenElement(0, "span");
+            builder.AddAttribute(1, "class", "match-team__name");
+            builder.AddContent(2, name);
+            builder.CloseElement();
+        }
+    };
 }

@@ -81,6 +81,8 @@
 .match-team--home .match-team__name { text-align: right; order: 0; }
 .match-team--home .match-team__flag { order: 1; }
 .match-team__name    { font-weight: 700; font-size: 1rem; color: #111827; }
+.match-team__link    { text-decoration: none; color: inherit; }
+.match-team__link:hover { color: #1d4ed8; text-decoration: underline; }
 .match-team__flag    { width: 28px; height: 20px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
 
 .match-score         { min-width: 80px; text-align: center; }

@@ -1,0 +1,54 @@
+@page "/statystyki"
+@inject ITeamService TeamService
+@using Typer.Application.Teams.DTOs
+
+<PageTitle>Statystyki drużyn — Typer</PageTitle>
+
+<h1 class="page-title">Statystyki drużyn</h1>
+<p class="stats-intro">Wybierz reprezentację, żeby zobaczyć tabelę grupy i ostatnie mecze.</p>
+
+@if (_teams is null)
+{
+    <p class="loading">Ładowanie drużyn…</p>
+}
+else if (_teams.Count == 0)
+{
+    <p>Brak drużyn w bazie.</p>
+}
+else
+{
+    @foreach (var group in _teams.GroupBy(t => t.GroupName ?? "").OrderBy(g => g.Key))
+    {
+        <section class="stats-group">
+            <h2 class="stats-group__title">
+                @(string.IsNullOrEmpty(group.Key) ? "Inne" : $"Grupa {group.Key}")
+            </h2>
+            <div class="stats-team-grid">
+                @foreach (var team in group.OrderBy(t => t.Name))
+                {
+                    <a href="/statystyki/druzyna/@team.Id" class="stats-team-card">
+                        @if (!string.IsNullOrEmpty(team.FlagUrl))
+                        {
+                            <img src="@team.FlagUrl" alt="" class="stats-team-card__flag" />
+                        }
+                        else
+                        {
+                            <span class="stats-team-card__flag stats-team-card__flag--placeholder">🏳</span>
+                        }
+                        <span class="stats-team-card__name">@team.Name</span>
+                        <span class="stats-team-card__code">@team.Code</span>
+                    </a>
+                }
+            </div>
+        </section>
+    }
+}
+
+@code {
+    private IReadOnlyList<TeamDto>? _teams;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _teams = await TeamService.GetAllAsync();
+    }
+}
