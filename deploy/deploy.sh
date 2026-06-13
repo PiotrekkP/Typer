@@ -9,6 +9,8 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="$REPO_DIR/docker-compose.prod.yml"
 ENV_FILE="$REPO_DIR/deploy/.env"
 NGINX_CONF="$REPO_DIR/deploy/nginx/conf.d/typer.conf"
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
 
 SKIP_PULL=false
 SKIP_MIGRATE=false
@@ -56,13 +58,7 @@ if [[ -z "$SITE_DOMAIN" ]]; then
 fi
 
 info "Applying nginx domain: $SITE_DOMAIN"
-if grep -q 'YOUR_DOMAIN' "$NGINX_CONF"; then
-  sed -i "s/YOUR_DOMAIN/${SITE_DOMAIN}/g" "$NGINX_CONF"
-fi
-
-if grep -q 'YOUR_DOMAIN' "$NGINX_CONF"; then
-  error "Nginx nadal zawiera YOUR_DOMAIN — sprawdź deploy/.env i plik $NGINX_CONF"
-fi
+apply_nginx_domain "$REPO_DIR" "$NGINX_CONF" "$SITE_DOMAIN"
 
 # ── Build images ──────────────────────────────────────────────
 BUILD_VERSION="$(git -C "$REPO_DIR" rev-parse --short HEAD 2>/dev/null || date -u +%Y%m%d%H%M)"
@@ -115,6 +111,23 @@ fi
 
 info "Starting all services..."
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --remove-orphans
+
+# ── Wait for backends, then reload nginx (nowe IP api/web + ewentualna nowa konfiguracja) ─
+info "Waiting for API to be healthy..."
+if ! wait_for_compose_health "$COMPOSE_FILE" "$ENV_FILE" api 60; then
+  warning "API nie osiągnął statusu healthy w czasie — kontynuuję deploy."
+fi
+
+info "Waiting for Web to be healthy..."
+if ! wait_for_compose_health "$COMPOSE_FILE" "$ENV_FILE" web 90; then
+  warning "Web nie osiągnął statusu healthy w czasie — kontynuuję deploy."
+fi
+
+info "Reloading nginx..."
+if ! reload_nginx "$COMPOSE_FILE" "$ENV_FILE"; then
+  warning "nginx reload failed — restarting container."
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" restart nginx
+fi
 
 # ── Health check ──────────────────────────────────────────────
 info "Checking service health..."

@@ -7,6 +7,8 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="$REPO_DIR/docker-compose.prod.yml"
 ENV_FILE="$REPO_DIR/deploy/.env"
 NGINX_CONF="$REPO_DIR/deploy/nginx/conf.d/typer.conf"
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; NC='\033[0m'
 info() { echo -e "${GREEN}[INFO]${NC}  $*"; }
@@ -26,11 +28,10 @@ fi
 
 if grep -q 'YOUR_DOMAIN' "$NGINX_CONF"; then
   info "Ustawiam domenę nginx: $SITE_DOMAIN"
-  sed -i "s/YOUR_DOMAIN/${SITE_DOMAIN}/g" "$NGINX_CONF"
-fi
-
-if grep -q 'YOUR_DOMAIN' "$NGINX_CONF"; then
-  error "Nginx nadal zawiera YOUR_DOMAIN"
+  apply_nginx_domain "$REPO_DIR" "$NGINX_CONF" "$SITE_DOMAIN"
+elif ! grep -Fq "$SITE_DOMAIN" "$NGINX_CONF"; then
+  info "Ustawiam domenę nginx: $SITE_DOMAIN"
+  apply_nginx_domain "$REPO_DIR" "$NGINX_CONF" "$SITE_DOMAIN"
 fi
 
 info "PostgreSQL..."
@@ -64,7 +65,16 @@ docker run --rm \
 info "Start wszystkich kontenerów..."
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --remove-orphans
 
-sleep 8
+info "Waiting for API to be healthy..."
+wait_for_compose_health "$COMPOSE_FILE" "$ENV_FILE" api 60 || true
+
+info "Waiting for Web to be healthy..."
+wait_for_compose_health "$COMPOSE_FILE" "$ENV_FILE" web 90 || true
+
+info "Reloading nginx..."
+reload_nginx "$COMPOSE_FILE" "$ENV_FILE" || docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" restart nginx
+
+sleep 5
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
 
 info "Sprawdź: curl -fs http://localhost/health && echo OK"

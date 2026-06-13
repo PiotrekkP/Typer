@@ -90,8 +90,10 @@ services:
     container_name: typer-nginx
     restart: unless-stopped
     depends_on:
-      - api
-      - web
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
