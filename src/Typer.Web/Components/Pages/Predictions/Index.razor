@@ -4,6 +4,8 @@
 @inject IMatchService MatchService
 @inject IPredictionService PredictionService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IWebHostEnvironment HostEnvironment
+@using Typer.Application.Matches
 @using Typer.Application.Predictions.DTOs
 
 <PageTitle>Typowanie</PageTitle>
@@ -72,10 +74,10 @@ else
     private void StartRefreshTimerIfNeeded()
     {
         if (_refreshTimer is not null) return;
-        if (_rounds is null || !HasOpenMatches()) return;
+        if (_rounds is null || !HasLiveOrOpenMatches()) return;
 
         _refreshCts   = new CancellationTokenSource();
-        _refreshTimer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+        _refreshTimer = new PeriodicTimer(LiveUiRefreshRules.GetRefreshInterval(HostEnvironment.IsDevelopment()));
         _ = RunRefreshLoopAsync(_refreshCts.Token);
     }
 
@@ -91,6 +93,9 @@ else
         }
         catch (OperationCanceledException) { }
     }
+
+    private bool HasLiveOrOpenMatches() =>
+        LiveUiRefreshRules.HasLiveMatches(_rounds) || HasOpenMatches();
 
     private bool HasOpenMatches() =>
         _rounds?.Any(r => r.Matches.Count > 0) ?? false;

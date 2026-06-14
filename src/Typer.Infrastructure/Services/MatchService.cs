@@ -115,8 +115,9 @@ public class MatchService : IMatchService
             .Include(m => m.HomeTeam)
             .Include(m => m.AwayTeam)
             .Include(m => m.GoalScorers.OrderBy(g => g.Minute))
-            .Where(m => m.Status == MatchStatus.Scheduled)
-            .OrderBy(m => m.KickOffUtc)
+            .Where(m => m.Status == MatchStatus.Scheduled || m.Status == MatchStatus.InProgress)
+            .OrderBy(m => m.Status == MatchStatus.InProgress ? 0 : 1)
+            .ThenBy(m => m.KickOffUtc)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 

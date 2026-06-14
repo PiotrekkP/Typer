@@ -156,6 +156,11 @@ public class AdminMatchService : IAdminMatchService
         match.ClockPhase = MatchClockPhase.FirstHalf;
         match.ClockBaseMinute = 0;
         match.ClockStartedUtc = now;
+        if (!wasLive)
+        {
+            match.LiveApiFixtureId = null;
+            match.LiveApiDiscoveryAttempts = 0;
+        }
         match.UpdatedAt = now;
 
         await context.SaveChangesAsync(cancellationToken);

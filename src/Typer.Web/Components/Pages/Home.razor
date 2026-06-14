@@ -1,14 +1,17 @@
 ﻿@page "/"
 @using Typer.Application.Matches.Interfaces
 @using Typer.Application.Matches.DTOs
+@using Typer.Application.Matches
 @using Typer.Application.Rankings.DTOs
 @using Typer.Application.UserProfile.DTOs
+@implements IAsyncDisposable
 @inject IMatchService MatchService
 @inject IRankingService RankingService
 @inject IUserProfileService UserProfileService
 @inject IPredictionService PredictionService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ISelectionLockService SelectionLockService
+@inject IWebHostEnvironment HostEnvironment
 
 <PageTitle>Typer — Liga typowania</PageTitle>
 
@@ -295,16 +298,73 @@
     private string? _userId;
     private bool _playerPhotoFailed;
 
+    private PeriodicTimer? _refreshTimer;
+    private CancellationTokenSource? _refreshCts;
+
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthStateProvider.GetAuthenticationStateAsync();
         _isAuthenticated = auth.User.Identity?.IsAuthenticated ?? false;
         _userId = auth.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
+        await LoadDashboardAsync();
+    }
+
+    private async Task LoadDashboardAsync()
+    {
         await LoadUpcomingAsync();
         await LoadRecentAsync();
         await LoadRankingAsync();
         await LoadSelectionAsync();
+        SyncRefreshTimer();
+    }
+
+    private void SyncRefreshTimer()
+    {
+        if (LiveUiRefreshRules.HasLiveMatches(_upcoming))
+            StartRefreshTimer();
+        else
+            StopRefreshTimer();
+    }
+
+    private void StartRefreshTimer()
+    {
+        if (_refreshTimer is not null) return;
+
+        _refreshCts = new CancellationTokenSource();
+        _refreshTimer = new PeriodicTimer(LiveUiRefreshRules.GetRefreshInterval(HostEnvironment.IsDevelopment()));
+        _ = RunRefreshLoopAsync(_refreshCts.Token);
+    }
+
+    private void StopRefreshTimer()
+    {
+        _refreshCts?.Cancel();
+        _refreshCts?.Dispose();
+        _refreshCts = null;
+        _refreshTimer?.Dispose();
+        _refreshTimer = null;
+    }
+
+    private async Task RunRefreshLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (await _refreshTimer!.WaitForNextTickAsync(ct))
+            {
+                await LoadUpcomingAsync();
+                await LoadRecentAsync();
+                await LoadRankingAsync();
+                SyncRefreshTimer();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        StopRefreshTimer();
+        await Task.CompletedTask;
     }
 
     private async Task LoadUpcomingAsync()
@@ -345,7 +405,8 @@
     {
         if (_userId is null) return;
         await PredictionService.SubmitAsync(_userId, new SubmitPredictionRequest(args.MatchId, args.Home, args.Away), CancellationToken.None);
-        _upcoming = await MatchService.GetUpcomingMatchesAsync(2, _userId);
+        await LoadUpcomingAsync();
+        SyncRefreshTimer();
     }
 
     private static string MedalOrPos(int pos) => pos switch

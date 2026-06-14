@@ -23,6 +23,12 @@ public class Match : BaseEntity
     public int? HomeScore { get; set; }
     public int? AwayScore { get; set; }
 
+    /// <summary>ID fixture w API-Sports — ustawiane po discovery z odds/live.</summary>
+    public int? LiveApiFixtureId { get; set; }
+
+    /// <summary>Liczba nieudanych prób discovery (odds/live bez fixture).</summary>
+    public int LiveApiDiscoveryAttempts { get; set; }
+
     public bool UseManualClock { get; set; }
     public MatchClockPhase ClockPhase { get; set; } = MatchClockPhase.PreMatch;
     public DateTime? ClockStartedUtc { get; set; }

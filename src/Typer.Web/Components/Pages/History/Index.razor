@@ -1,7 +1,9 @@
 @page "/wyniki"
 @using System.Security.Claims
+@implements IAsyncDisposable
 @inject IMatchService MatchService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IWebHostEnvironment HostEnvironment
 @using Typer.Application.Matches
 
 <PageTitle>Wyniki — Typer</PageTitle>
@@ -47,14 +49,69 @@ else
     private bool _isAuthenticated;
     private string? _userId;
 
+    private PeriodicTimer? _refreshTimer;
+    private CancellationTokenSource? _refreshCts;
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
         _userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
+        await LoadRoundsAsync();
+    }
+
+    private async Task LoadRoundsAsync()
+    {
         _rounds = await MatchService.GetRoundsWithMatchesAsync(
             userId: _userId,
             scope: MatchRoundsScope.Results);
+
+        SyncRefreshTimer();
+    }
+
+    private void SyncRefreshTimer()
+    {
+        if (LiveUiRefreshRules.HasLiveMatches(_rounds))
+            StartRefreshTimer();
+        else
+            StopRefreshTimer();
+    }
+
+    private void StartRefreshTimer()
+    {
+        if (_refreshTimer is not null) return;
+
+        _refreshCts = new CancellationTokenSource();
+        _refreshTimer = new PeriodicTimer(LiveUiRefreshRules.GetRefreshInterval(HostEnvironment.IsDevelopment()));
+        _ = RunRefreshLoopAsync(_refreshCts.Token);
+    }
+
+    private void StopRefreshTimer()
+    {
+        _refreshCts?.Cancel();
+        _refreshCts?.Dispose();
+        _refreshCts = null;
+        _refreshTimer?.Dispose();
+        _refreshTimer = null;
+    }
+
+    private async Task RunRefreshLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (await _refreshTimer!.WaitForNextTickAsync(ct))
+            {
+                await LoadRoundsAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        StopRefreshTimer();
+        await Task.CompletedTask;
     }
 }

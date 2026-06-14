@@ -210,6 +210,14 @@ namespace Typer.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("AwayTeamId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("LiveApiDiscoveryAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<int?>("LiveApiFixtureId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("ClockBaseMinute")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -253,6 +261,8 @@ namespace Typer.Infrastructure.Persistence.Migrations
                         .HasDefaultValue(false);
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LiveApiFixtureId");
 
                     b.HasIndex("AwayTeamId");
 
@@ -538,6 +548,9 @@ namespace Typer.Infrastructure.Persistence.Migrations
                     b.Property<string>("GroupName")
                         .HasColumnType("text");
 
+                    b.Property<int?>("LiveApiId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -550,6 +563,8 @@ namespace Typer.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("LiveApiId");
 
                     b.ToTable("Teams");
                 });

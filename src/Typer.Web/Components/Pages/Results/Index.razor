@@ -1,7 +1,10 @@
 @page "/historia"
+@implements IAsyncDisposable
 @inject IMatchService MatchService
+@inject IWebHostEnvironment HostEnvironment
 @using Typer.Application.Matches
 @using Typer.Application.Matches.DTOs
+@using Typer.Domain.Enums
 
 <PageTitle>Historia — Typer</PageTitle>
 
@@ -142,9 +145,12 @@
             .ThenByDescending(m => m.KickOffUtc)
             .GroupBy(m => m.RoundName);
 
+    private PeriodicTimer? _refreshTimer;
+    private CancellationTokenSource? _refreshCts;
+
     protected override async Task OnInitializedAsync()
     {
-        _matches = await MatchService.GetResultsMatchOptionsAsync();
+        await LoadMatchesAsync();
 
         if (_matches.Count > 0)
         {
@@ -152,6 +158,64 @@
             _selectedMatch = _matches[0];
             await LoadPredictionsAsync();
         }
+    }
+
+    private async Task LoadMatchesAsync()
+    {
+        _matches = await MatchService.GetResultsMatchOptionsAsync();
+        _selectedMatch = _matches.FirstOrDefault(m => m.MatchId == _selectedMatchId)
+            ?? _matches.FirstOrDefault();
+        if (_selectedMatch is not null)
+            _selectedMatchId = _selectedMatch.MatchId;
+
+        SyncRefreshTimer();
+    }
+
+    private void SyncRefreshTimer()
+    {
+        if (_matches.Any(m => m.Status == nameof(MatchStatus.InProgress)))
+            StartRefreshTimer();
+        else
+            StopRefreshTimer();
+    }
+
+    private void StartRefreshTimer()
+    {
+        if (_refreshTimer is not null) return;
+
+        _refreshCts = new CancellationTokenSource();
+        _refreshTimer = new PeriodicTimer(LiveUiRefreshRules.GetRefreshInterval(HostEnvironment.IsDevelopment()));
+        _ = RunRefreshLoopAsync(_refreshCts.Token);
+    }
+
+    private void StopRefreshTimer()
+    {
+        _refreshCts?.Cancel();
+        _refreshCts?.Dispose();
+        _refreshCts = null;
+        _refreshTimer?.Dispose();
+        _refreshTimer = null;
+    }
+
+    private async Task RunRefreshLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (await _refreshTimer!.WaitForNextTickAsync(ct))
+            {
+                await LoadMatchesAsync();
+                if (_selectedMatchId != Guid.Empty)
+                    await LoadPredictionsAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        StopRefreshTimer();
+        await Task.CompletedTask;
     }
 
     private async Task OnMatchSelectedAsync(ChangeEventArgs e)

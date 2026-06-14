@@ -45,6 +45,8 @@ public class MatchLifecycleService : IMatchLifecycleService
             match.ClockPhase = MatchClockPhase.FirstHalf;
             match.ClockBaseMinute = 0;
             match.ClockStartedUtc = now;
+            match.LiveApiFixtureId = null;
+            match.LiveApiDiscoveryAttempts = 0;
             match.UpdatedAt = now;
             _logger.LogInformation("Mecz {MatchId} rozpoczęty — status InProgress.", match.Id);
         }

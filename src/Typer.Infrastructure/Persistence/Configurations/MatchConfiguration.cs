@@ -34,5 +34,7 @@ public class MatchConfiguration : IEntityTypeConfiguration<Match>
         builder.Property(m => m.UseManualClock).HasDefaultValue(false);
         builder.Property(m => m.ClockPhase).HasDefaultValue(MatchClockPhase.PreMatch);
         builder.Property(m => m.ClockBaseMinute).HasDefaultValue(0);
+        builder.Property(m => m.LiveApiDiscoveryAttempts).HasDefaultValue(0);
+        builder.HasIndex(m => m.LiveApiFixtureId);
     }
 }

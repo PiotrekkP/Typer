@@ -12,5 +12,6 @@ public class TeamConfiguration : IEntityTypeConfiguration<Team>
         builder.Property(t => t.Name).HasMaxLength(100).IsRequired();
         builder.Property(t => t.Code).HasMaxLength(3).IsRequired();
         builder.HasIndex(t => t.Code).IsUnique();
+        builder.HasIndex(t => t.LiveApiId);
     }
 }
