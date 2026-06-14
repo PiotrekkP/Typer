@@ -419,3 +419,17 @@ a.team-link:hover {
         display: none !important;
     }
 }
+
+/* ── Ranking: czarna ramka wokół wiersza zalogowanego użytkownika ── */
+.ranking-table tbody tr.ranking-row--me td {
+    border-top: 2px solid #000 !important;
+    border-bottom: 2px solid #000 !important;
+}
+
+.ranking-table tbody tr.ranking-row--me td:first-child {
+    border-left: 2px solid #000 !important;
+}
+
+.ranking-table tbody tr.ranking-row--me td:last-child {
+    border-right: 2px solid #000 !important;
+}

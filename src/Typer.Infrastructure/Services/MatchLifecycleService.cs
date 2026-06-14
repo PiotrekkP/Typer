@@ -41,6 +41,8 @@ public class MatchLifecycleService : IMatchLifecycleService
         foreach (var match in toStart)
         {
             match.Status = MatchStatus.InProgress;
+            match.HomeScore = 0;
+            match.AwayScore = 0;
             match.UseManualClock = true;
             match.ClockPhase = MatchClockPhase.FirstHalf;
             match.ClockBaseMinute = 0;

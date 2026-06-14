@@ -1,9 +1,13 @@
 @using Typer.Application.Rankings.DTOs
 @using Typer.Application.Rankings.Interfaces
 @using Typer.Application.Scoring
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @implements IAsyncDisposable
 @inject IRankingService RankingService
 @inject IWebHostEnvironment HostEnvironment
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IHttpContextAccessor HttpContextAccessor
 
 <div class="ranking-page">
 
@@ -60,7 +64,7 @@
                 <tbody>
                     @foreach (var entry in _ranking)
                     {
-                        <tr class="ranking-row ranking-row--@MedalClass(entry.Position)">
+                        <tr class="@GetRowClass(entry)">
                             <td class="col-pos">
                                 <span class="position-badge position-badge--@MedalClass(entry.Position)">
                                     @(entry.Position <= 3 ? MedalIcon(entry.Position) : entry.Position.ToString())
@@ -142,12 +146,14 @@
     [Parameter] public string EmptyMessage { get; set; } = "Ranking jest pusty — nikt jeszcze nie typował.";
 
     private IReadOnlyList<RankingEntryDto>? _ranking;
+    private string? _userId;
     private Dictionary<string, int> _positionDeltas = new();
     private Dictionary<string, int> _pointDeltas = new();
     private bool _liveSessionActive;
 
     private PeriodicTimer? _refreshTimer;
     private CancellationTokenSource? _refreshCts;
+    private AuthenticationStateChangedHandler? _authChangedHandler;
 
     private TimeSpan RefreshInterval =>
         HostEnvironment.IsDevelopment()
@@ -156,8 +162,31 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _authChangedHandler = async task =>
+        {
+            ResolveCurrentUserId((await task).User);
+            await InvokeAsync(StateHasChanged);
+        };
+        AuthStateProvider.AuthenticationStateChanged += _authChangedHandler!;
+
+        ResolveCurrentUserId((await AuthStateProvider.GetAuthenticationStateAsync()).User);
+
         await RefreshRankingAsync();
         StartRefreshTimer();
+    }
+
+    private void ResolveCurrentUserId(ClaimsPrincipal? authUser = null)
+    {
+        authUser ??= HttpContextAccessor.HttpContext?.User;
+
+        if (authUser?.Identity?.IsAuthenticated != true)
+        {
+            _userId = null;
+            return;
+        }
+
+        _userId = authUser.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? authUser.FindFirstValue("sub");
     }
 
     private async Task RefreshRankingAsync()
@@ -228,6 +257,9 @@
 
     public async ValueTask DisposeAsync()
     {
+        if (_authChangedHandler is not null)
+            AuthStateProvider.AuthenticationStateChanged -= _authChangedHandler;
+
         StopRefreshTimer();
         await Task.CompletedTask;
     }
@@ -247,4 +279,16 @@
         3 => "bronze",
         _ => "other"
     };
+
+    private bool IsCurrentUser(RankingEntryDto entry) =>
+        _userId is not null
+        && string.Equals(_userId, entry.UserId, StringComparison.OrdinalIgnoreCase);
+
+    private string GetRowClass(RankingEntryDto entry)
+    {
+        var medal = MedalClass(entry.Position);
+        return IsCurrentUser(entry)
+            ? $"ranking-row ranking-row--{medal} ranking-row--me"
+            : $"ranking-row ranking-row--{medal}";
+    }
 }
