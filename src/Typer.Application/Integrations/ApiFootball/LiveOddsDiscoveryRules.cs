@@ -16,5 +16,6 @@ public static class LiveOddsDiscoveryRules
         elapsedMinute is int minute && minute >= 0 && minute <= maxElapsedMinutes;
 
     public static bool IsDiscoverableSnapshot(ApiFootballOddsLiveSnapshot snapshot, int maxElapsedMinutes) =>
-        !snapshot.Finished && IsRecentlyStarted(snapshot.ElapsedMinute, maxElapsedMinutes);
+        !ApiFootballFixtureStatusRules.IsMatchFinished(snapshot.StatusLong, snapshot.StatusShort)
+        && IsRecentlyStarted(snapshot.ElapsedMinute, maxElapsedMinutes);
 }

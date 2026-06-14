@@ -21,6 +21,7 @@ internal sealed class ApiFootballOddsLiveFixture
 internal sealed class ApiFootballFixtureStatus
 {
     public string? Long { get; set; }
+    public string? Short { get; set; }
     public int? Elapsed { get; set; }
     public string? Seconds { get; set; }
 }

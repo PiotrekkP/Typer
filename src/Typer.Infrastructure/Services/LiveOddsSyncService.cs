@@ -6,7 +6,6 @@ using Typer.Application.Rankings.Interfaces;
 using Typer.Application.Scoring.Interfaces;
 using Typer.Domain.Entities;
 using Typer.Domain.Enums;
-using Typer.Infrastructure.Integrations.ApiFootball;
 using Typer.Infrastructure.Options;
 using Typer.Infrastructure.Persistence;
 
@@ -230,8 +229,8 @@ public sealed class LiveOddsSyncService : ILiveOddsSyncService
         var previousAway = match.AwayScore;
         var previousPhase = match.ClockPhase;
         var previousMinute = match.ClockBaseMinute;
-        var phase = ApiFootballClockMapper.MapPhase(snapshot.StatusLong, snapshot.Finished);
-        var finished = snapshot.Finished || phase == MatchClockPhase.FullTime;
+        var phase = ApiFootballFixtureStatusRules.MapPhase(snapshot.StatusLong, snapshot.StatusShort);
+        var finished = ApiFootballFixtureStatusRules.IsMatchFinished(snapshot.StatusLong, snapshot.StatusShort);
 
         match.HomeScore = snapshot.HomeGoals;
         match.AwayScore = snapshot.AwayGoals;

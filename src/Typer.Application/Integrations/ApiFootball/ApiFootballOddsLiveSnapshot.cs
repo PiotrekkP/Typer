@@ -8,6 +8,7 @@ public sealed record ApiFootballOddsLiveSnapshot(
     int AwayGoals,
     int? ElapsedMinute,
     string StatusLong,
-    bool Finished,
-    bool Stopped,
-    bool Blocked);
+    string? StatusShort,
+    bool OddsFinished,
+    bool OddsStopped,
+    bool OddsBlocked);

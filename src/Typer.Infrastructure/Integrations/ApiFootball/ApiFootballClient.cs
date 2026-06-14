@@ -76,6 +76,7 @@ public sealed class ApiFootballClient : IApiFootballClient
             item.Teams.Away.Goals ?? 0,
             item.Fixture.Status?.Elapsed,
             item.Fixture.Status?.Long ?? string.Empty,
+            item.Fixture.Status?.Short,
             item.Status?.Finished ?? false,
             item.Status?.Stopped ?? false,
             item.Status?.Blocked ?? false);
