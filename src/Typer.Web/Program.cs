@@ -7,7 +7,7 @@ using Typer.Infrastructure;
 using Typer.Infrastructure.Identity;
 using Typer.Infrastructure.Services;
 using Typer.Infrastructure.Persistence;
-using Typer.Application.Integrations.ApiFootball;
+using Typer.Application.Integrations.FootballData;
 using Typer.Application.Matches.Interfaces;
 using Typer.Application.Scoring.Interfaces;
 using Typer.Web.Components;
@@ -131,8 +131,8 @@ static async Task RunStartupJobsAsync(IServiceProvider services)
         var scoring = scope.ServiceProvider.GetRequiredService<IScoringService>();
         await scoring.UpdateLiveScoresForInProgressMatchesAsync();
 
-        var liveOdds = scope.ServiceProvider.GetRequiredService<ILiveOddsSyncService>();
-        await liveOdds.SyncAsync();
+        var liveMatchSync = scope.ServiceProvider.GetRequiredService<ILiveMatchSyncService>();
+        await liveMatchSync.SyncAsync();
     }
     catch (Exception ex)
     {

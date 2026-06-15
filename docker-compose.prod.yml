@@ -76,13 +76,11 @@ services:
       ApiBaseUrl: http://api:8080
       Admin__AdminEmails__0: ${ADMIN_EMAIL:-piotr.paluszek1@gmail.com}
       Vip__VipEmails__0: ${VIP_EMAIL:-}
-      ApiFootball__Enabled: ${APIFOOTBALL_ENABLED:-false}
-      ApiFootball__ApiKey: ${APIFOOTBALL_API_KEY:-}
-      ApiFootball__LeagueId: ${APIFOOTBALL_LEAGUE_ID:-1}
-      ApiFootball__PollIntervalMinutes: ${APIFOOTBALL_POLL_INTERVAL_MINUTES:-4}
-      ApiFootball__DiscoveryPollIntervalMinutes: ${APIFOOTBALL_DISCOVERY_POLL_INTERVAL_MINUTES:-1}
-      ApiFootball__DiscoveryMaxAttempts: ${APIFOOTBALL_DISCOVERY_MAX_ATTEMPTS:-5}
-      ApiFootball__DiscoveryMaxElapsedMinutes: ${APIFOOTBALL_DISCOVERY_MAX_ELAPSED_MINUTES:-5}
+      FootballData__Enabled: ${FOOTBALL_DATA_ENABLED:-false}
+      FootballData__AuthToken: ${FOOTBALL_DATA_AUTH_TOKEN:-}
+      FootballData__PollIntervalSeconds: ${FOOTBALL_DATA_POLL_INTERVAL_SECONDS:-60}
+      FootballData__DiscoveryPollIntervalSeconds: ${FOOTBALL_DATA_DISCOVERY_POLL_INTERVAL_SECONDS:-60}
+      FootballData__DiscoveryMaxAttempts: ${FOOTBALL_DATA_DISCOVERY_MAX_ATTEMPTS:-10}
       ASPNETCORE_ENVIRONMENT: Production
     networks:
       - typer-internal

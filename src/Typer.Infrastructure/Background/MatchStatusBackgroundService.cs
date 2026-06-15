@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Typer.Application.Integrations.FootballData;
 using Typer.Application.Matches.Interfaces;
 
 namespace Typer.Infrastructure.Background;
@@ -45,7 +46,13 @@ public class MatchStatusBackgroundService : BackgroundService
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var lifecycle = scope.ServiceProvider.GetRequiredService<IMatchLifecycleService>();
-            await lifecycle.AdvanceStatusesAsync(stoppingToken);
+            var started = await lifecycle.AdvanceStatusesAsync(stoppingToken);
+
+            if (started > 0)
+            {
+                var sync = scope.ServiceProvider.GetRequiredService<ILiveMatchSyncService>();
+                await sync.SyncAsync(stoppingToken);
+            }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {

@@ -23,7 +23,7 @@ public class Match : BaseEntity
     public int? HomeScore { get; set; }
     public int? AwayScore { get; set; }
 
-    /// <summary>ID fixture w API-Sports — ustawiane po discovery z odds/live.</summary>
+    /// <summary>ID meczu w football-data.org — ustawiane po discovery z feedu LIVE.</summary>
     public int? LiveApiFixtureId { get; set; }
 
     /// <summary>Liczba nieudanych prób discovery (odds/live bez fixture).</summary>

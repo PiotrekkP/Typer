@@ -9,7 +9,7 @@ public class Team : BaseEntity
     public string? FlagUrl { get; set; }
     public string? GroupName { get; set; }
 
-    /// <summary>ID drużyny w API-Sports (odds/live, teams).</summary>
+    /// <summary>ID drużyny w football-data.org (dopasowanie meczów LIVE).</summary>
     public int? LiveApiId { get; set; }
 
     public ICollection<Player> Players { get; set; } = [];

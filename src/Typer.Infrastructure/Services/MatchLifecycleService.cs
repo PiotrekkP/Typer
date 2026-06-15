@@ -28,7 +28,7 @@ public class MatchLifecycleService : IMatchLifecycleService
         _logger = logger;
     }
 
-    public async Task AdvanceStatusesAsync(CancellationToken cancellationToken = default)
+    public async Task<int> AdvanceStatusesAsync(CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
@@ -97,5 +97,7 @@ public class MatchLifecycleService : IMatchLifecycleService
         }
 
         await _rankingLiveBaselineService.SyncWithLiveMatchesAsync(cancellationToken);
+
+        return toStart.Count;
     }
 }
