@@ -116,32 +116,35 @@ public sealed class LiveMatchSyncService : ILiveMatchSyncService
 
             if (match.LiveApiFixtureId is int trackedId)
             {
+                // Feed LIVE zawiera wyłącznie IN_PLAY i PAUSED — brak meczu = koniec gry.
+                FootballDataLiveMatchSnapshot? detail = null;
                 try
                 {
-                    var detail = await _footballDataClient.GetMatchAsync(trackedId, cancellationToken);
-                    if (detail is not null)
-                    {
-                        if (ApplySnapshot(match, detail, now))
-                            updatedMatchIds.Add(match.Id);
-
-                        if (match.Status == MatchStatus.Finished)
-                            continue;
-                    }
-                    else if (ShouldAutoFinish(match.KickOffUtc, now))
-                    {
-                        MarkMatchFinished(match, now);
-                        updatedMatchIds.Add(match.Id);
-                        _logger.LogInformation(
-                            "Mecz {MatchId} zakończony — brak danych API dla fixture {FixtureId}.",
-                            match.Id,
-                            trackedId);
-                        continue;
-                    }
+                    detail = await _footballDataClient.GetMatchAsync(trackedId, cancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Nie udało się pobrać meczu {MatchId} z football-data.org.", trackedId);
+                    _logger.LogWarning(ex, "Nie udało się pobrać meczu {FixtureId} z football-data.org.", trackedId);
                 }
+
+                if (detail is not null)
+                {
+                    if (ApplySnapshot(match, detail, now))
+                        updatedMatchIds.Add(match.Id);
+                }
+
+                if (match.Status != MatchStatus.Finished)
+                {
+                    MarkMatchFinished(match, now);
+                    updatedMatchIds.Add(match.Id);
+                    _logger.LogInformation(
+                        "Mecz {MatchId} zakończony — zniknął z feedu LIVE (fixture {FixtureId}, status detail: {Status}).",
+                        match.Id,
+                        trackedId,
+                        detail?.Status ?? "brak");
+                }
+
+                continue;
             }
 
             if (NeedsDiscovery(match))
