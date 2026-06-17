@@ -87,6 +87,7 @@ public sealed class FootballDataClient : IFootballDataClient
             item.Score?.FullTime?.Home,
             item.Score?.FullTime?.Away,
             item.Status,
+            item.UtcDate,
             item.LastUpdated);
     }
 

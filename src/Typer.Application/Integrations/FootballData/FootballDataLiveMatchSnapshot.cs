@@ -11,4 +11,5 @@ public sealed record FootballDataLiveMatchSnapshot(
     int? HomeGoals,
     int? AwayGoals,
     string Status,
+    DateTime? UtcDate,
     DateTime? LastUpdatedUtc);

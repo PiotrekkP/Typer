@@ -217,7 +217,7 @@
         if (_timer is not null || !NeedsLiveTimer) return;
 
         _cts   = new CancellationTokenSource();
-        _timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
         _ = RunTimerAsync(_cts.Token);
     }
 
@@ -276,17 +276,26 @@
     {
         get
         {
-            if (Enum.TryParse<MatchClockPhase>(Match.ClockPhase, out var phase))
+            if (Match.UseManualClock
+                && Enum.TryParse<MatchClockPhase>(Match.ClockPhase, out var manualPhase))
             {
                 return MatchClockRules.GetLiveMinuteDisplay(
-                    Match.UseManualClock,
-                    phase,
+                    useManualClock: true,
+                    manualPhase,
                     Match.ClockStartedUtc,
                     Match.ClockBaseMinute,
                     Match.KickOffUtc);
             }
 
-            return Match.LiveMinuteDisplay ?? "0'";
+            var kickOff = Match.LiveKickOffUtc ?? Match.KickOffUtc;
+            return MatchClockRules.GetLiveMinuteDisplay(
+                useManualClock: false,
+                Enum.TryParse<MatchClockPhase>(Match.ClockPhase, out var kickOffPhase)
+                    ? kickOffPhase
+                    : MatchClockPhase.FirstHalf,
+                Match.ClockStartedUtc,
+                Match.ClockBaseMinute,
+                kickOff);
         }
     }
 

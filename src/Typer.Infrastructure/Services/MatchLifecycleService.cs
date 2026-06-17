@@ -43,12 +43,13 @@ public class MatchLifecycleService : IMatchLifecycleService
             match.Status = MatchStatus.InProgress;
             match.HomeScore = 0;
             match.AwayScore = 0;
-            match.UseManualClock = true;
+            match.UseManualClock = false;
             match.ClockPhase = MatchClockPhase.FirstHalf;
             match.ClockBaseMinute = 0;
-            match.ClockStartedUtc = now;
+            match.ClockStartedUtc = null;
             match.LiveApiFixtureId = null;
             match.LiveApiDiscoveryAttempts = 0;
+            match.LiveApiKickOffUtc = null;
             match.UpdatedAt = now;
             _logger.LogInformation("Mecz {MatchId} rozpoczęty — status InProgress.", match.Id);
         }
@@ -63,7 +64,6 @@ public class MatchLifecycleService : IMatchLifecycleService
 
         var toFinish = await context.Matches
             .Where(m => m.Status == MatchStatus.InProgress
-                        && !m.UseManualClock
                         && m.KickOffUtc <= liveEndsBefore)
             .ToListAsync(cancellationToken);
 
@@ -71,7 +71,10 @@ public class MatchLifecycleService : IMatchLifecycleService
         {
             match.Status = MatchStatus.Finished;
             match.UpdatedAt = now;
-            _logger.LogInformation("Mecz {MatchId} zakończony po {Hours}h — status Finished.", match.Id, MatchLifecycleRules.LiveDuration.TotalHours);
+            _logger.LogInformation(
+                "Mecz {MatchId} zakończony awaryjnie po {Hours}h od kickoffu — status Finished.",
+                match.Id,
+                MatchLifecycleRules.LiveDuration.TotalHours);
         }
 
         if (toFinish.Count > 0)

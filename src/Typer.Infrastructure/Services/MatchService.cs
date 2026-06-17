@@ -210,12 +210,20 @@ public class MatchService : IMatchService
     {
         var effectiveStatus = MatchLifecycleRules.GetEffectiveStatusName(match.Status, match.KickOffUtc);
         var predictionStatus = MatchLifecycleRules.GetPredictionStatus(match.Status, match.KickOffUtc);
-        var liveMinute = MatchClockRules.GetLiveMinuteDisplay(
-            match.UseManualClock,
-            match.ClockPhase,
-            match.ClockStartedUtc,
-            match.ClockBaseMinute,
-            match.KickOffUtc);
+        var clockKickOff = match.LiveApiKickOffUtc ?? match.KickOffUtc;
+        var liveMinute = match.UseManualClock
+            ? MatchClockRules.GetLiveMinuteDisplay(
+                match.UseManualClock,
+                match.ClockPhase,
+                match.ClockStartedUtc,
+                match.ClockBaseMinute,
+                match.KickOffUtc)
+            : MatchClockRules.GetLiveMinuteDisplay(
+                useManualClock: false,
+                match.ClockPhase,
+                match.ClockStartedUtc,
+                match.ClockBaseMinute,
+                clockKickOff);
 
         return new MatchDetailDto(
             match.Id,
@@ -245,7 +253,8 @@ public class MatchService : IMatchService
             match.ClockPhase.ToString(),
             match.ClockStartedUtc,
             match.ClockBaseMinute,
-            liveMinute);
+            liveMinute,
+            match.LiveApiKickOffUtc);
     }
 
     public async Task<Result> UpdateMatchResultAsync(

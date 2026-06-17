@@ -4,7 +4,11 @@ namespace Typer.Application.Matches;
 
 public static class MatchLifecycleRules
 {
-    public static readonly TimeSpan LiveDuration = TimeSpan.FromHours(2);
+    /// <summary>
+    /// Maksymalny czas trwania meczu od kickoffu — tylko awaryjne zamknięcie, gdy API nie potwierdzi końca.
+    /// 4h obejmuje dogrywkę i karne (MŚ).
+    /// </summary>
+    public static readonly TimeSpan LiveDuration = TimeSpan.FromHours(4);
 
     public static DateTime EnsureUtc(DateTime value) =>
         value.Kind switch

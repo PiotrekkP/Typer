@@ -41,7 +41,8 @@ public record MatchDetailDto(
     string ClockPhase = "PreMatch",
     DateTime? ClockStartedUtc = null,
     int ClockBaseMinute = 0,
-    string? LiveMinuteDisplay = null);
+    string? LiveMinuteDisplay = null,
+    DateTime? LiveKickOffUtc = null);
 
 /// <summary>
 /// Żądanie aktualizacji wyniku meczu. Status = 2 (Finished) automatycznie wyzwala

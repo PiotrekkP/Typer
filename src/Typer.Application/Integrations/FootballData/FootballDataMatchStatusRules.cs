@@ -1,16 +1,26 @@
+using Typer.Application.Matches;
 using Typer.Domain.Enums;
 
 namespace Typer.Application.Integrations.FootballData;
 
 public static class FootballDataMatchStatusRules
 {
-    public static MatchClockPhase MapPhase(string status) => status.Trim().ToUpperInvariant() switch
+    public static MatchClockPhase MapPhase(
+        string status,
+        MatchClockPhase currentPhase = MatchClockPhase.PreMatch)
     {
-        "PAUSED" => MatchClockPhase.HalfTime,
-        "FINISHED" or "AWARDED" => MatchClockPhase.FullTime,
-        "IN_PLAY" => MatchClockPhase.SecondHalf,
-        _ => MatchClockPhase.FirstHalf
-    };
+        var normalized = status.Trim().ToUpperInvariant();
+
+        return normalized switch
+        {
+            "PAUSED" => MatchClockPhase.HalfTime,
+            "FINISHED" or "AWARDED" => MatchClockPhase.FullTime,
+            "IN_PLAY" when currentPhase is MatchClockPhase.HalfTime or MatchClockPhase.SecondHalf
+                => MatchClockPhase.SecondHalf,
+            "IN_PLAY" => MatchClockPhase.FirstHalf,
+            _ => MatchClockPhase.FirstHalf
+        };
+    }
 
     public static bool IsLive(string status)
     {

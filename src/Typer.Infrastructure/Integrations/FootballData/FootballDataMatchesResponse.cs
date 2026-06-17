@@ -9,6 +9,9 @@ internal sealed class FootballDataMatchItem
 {
     public int Id { get; set; }
     public string? Status { get; set; }
+    public int? Minute { get; set; }
+    public int? InjuryTime { get; set; }
+    public DateTime? UtcDate { get; set; }
     public DateTime? LastUpdated { get; set; }
     public FootballDataTeamSide? HomeTeam { get; set; }
     public FootballDataTeamSide? AwayTeam { get; set; }

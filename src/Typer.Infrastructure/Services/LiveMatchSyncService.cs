@@ -116,7 +116,6 @@ public sealed class LiveMatchSyncService : ILiveMatchSyncService
 
             if (match.LiveApiFixtureId is int trackedId)
             {
-                // Feed LIVE zawiera wyłącznie IN_PLAY i PAUSED — brak meczu = koniec gry.
                 FootballDataLiveMatchSnapshot? detail = null;
                 try
                 {
@@ -129,16 +128,39 @@ public sealed class LiveMatchSyncService : ILiveMatchSyncService
 
                 if (detail is not null)
                 {
+                    RememberApiIds(match, detail);
+
                     if (ApplySnapshot(match, detail, now))
                         updatedMatchIds.Add(match.Id);
+
+                    if (FootballDataMatchStatusRules.IsLive(detail.Status))
+                    {
+                        _logger.LogDebug(
+                            "Mecz {MatchId} (fixture {FixtureId}) poza feedem LIVE, ale detail = {Status} — bez kończenia.",
+                            match.Id,
+                            trackedId,
+                            detail.Status);
+                        continue;
+                    }
+
+                    if (FootballDataMatchStatusRules.IsMatchFinished(detail.Status))
+                        continue;
                 }
 
-                if (match.Status != MatchStatus.Finished)
+                if (ShouldAutoFinish(match.KickOffUtc, now))
                 {
                     MarkMatchFinished(match, now);
                     updatedMatchIds.Add(match.Id);
                     _logger.LogInformation(
-                        "Mecz {MatchId} zakończony — zniknął z feedu LIVE (fixture {FixtureId}, status detail: {Status}).",
+                        "Mecz {MatchId} zakończony awaryjnie po {Hours}h od kickoffu (brak w feedzie LIVE, detail: {Status}).",
+                        match.Id,
+                        MatchLifecycleRules.LiveDuration.TotalHours,
+                        detail?.Status ?? "brak");
+                }
+                else
+                {
+                    _logger.LogDebug(
+                        "Mecz {MatchId} (fixture {FixtureId}) poza feedem LIVE — czekamy (detail: {Status}).",
                         match.Id,
                         trackedId,
                         detail?.Status ?? "brak");
@@ -239,8 +261,12 @@ public sealed class LiveMatchSyncService : ILiveMatchSyncService
         var previousHome = match.HomeScore;
         var previousAway = match.AwayScore;
         var previousPhase = match.ClockPhase;
+        var previousBaseMinute = match.ClockBaseMinute;
+        var previousUseManualClock = match.UseManualClock;
+        var previousLiveKickOff = match.LiveApiKickOffUtc;
+        var previousClockStarted = match.ClockStartedUtc;
         var finished = FootballDataMatchStatusRules.IsMatchFinished(snapshot.Status);
-        var phase = FootballDataMatchStatusRules.MapPhase(snapshot.Status);
+        var phase = FootballDataMatchStatusRules.MapPhase(snapshot.Status, match.ClockPhase);
 
         if (snapshot.HomeGoals is int home)
             match.HomeScore = home;
@@ -248,8 +274,8 @@ public sealed class LiveMatchSyncService : ILiveMatchSyncService
         if (snapshot.AwayGoals is int away)
             match.AwayScore = away;
 
-        match.UseManualClock = true;
         match.ClockPhase = phase;
+        ApplyClockFromSnapshot(match, snapshot, phase, previousPhase, now);
         match.UpdatedAt = now;
 
         if (finished)
@@ -267,7 +293,59 @@ public sealed class LiveMatchSyncService : ILiveMatchSyncService
         return previousHome != match.HomeScore
             || previousAway != match.AwayScore
             || previousPhase != match.ClockPhase
+            || previousBaseMinute != match.ClockBaseMinute
+            || previousUseManualClock != match.UseManualClock
+            || previousLiveKickOff != match.LiveApiKickOffUtc
+            || previousClockStarted != match.ClockStartedUtc
             || finished;
+    }
+
+    private static void ApplyClockFromSnapshot(
+        Match match,
+        FootballDataLiveMatchSnapshot snapshot,
+        MatchClockPhase phase,
+        MatchClockPhase previousPhase,
+        DateTime now)
+    {
+        if (snapshot.UtcDate is DateTime utcDate)
+            match.LiveApiKickOffUtc = MatchLifecycleRules.EnsureUtc(utcDate);
+
+        switch (phase)
+        {
+            case MatchClockPhase.HalfTime:
+                match.UseManualClock = true;
+                match.ClockBaseMinute = 45;
+                match.ClockStartedUtc = null;
+                break;
+
+            case MatchClockPhase.FullTime:
+                match.UseManualClock = true;
+                match.ClockStartedUtc = null;
+                match.LiveApiKickOffUtc = null;
+                break;
+
+            case MatchClockPhase.SecondHalf:
+                match.UseManualClock = true;
+                if (previousPhase == MatchClockPhase.HalfTime)
+                {
+                    match.ClockBaseMinute = 46;
+                    match.ClockStartedUtc = now;
+                }
+                else if (match.ClockStartedUtc is null)
+                {
+                    // Sync w trakcie 2. połowy bez widzianej przerwy — szacunek od kickoffu API.
+                    var kickOff = match.LiveApiKickOffUtc ?? match.KickOffUtc;
+                    match.ClockBaseMinute = 46;
+                    match.ClockStartedUtc = MatchLifecycleRules.EnsureUtc(kickOff).AddMinutes(60);
+                }
+                break;
+
+            default:
+                match.UseManualClock = false;
+                match.ClockBaseMinute = 0;
+                match.ClockStartedUtc = null;
+                break;
+        }
     }
 
     private static void MarkMatchFinished(Match match, DateTime now)
@@ -275,6 +353,7 @@ public sealed class LiveMatchSyncService : ILiveMatchSyncService
         match.Status = MatchStatus.Finished;
         match.ClockPhase = MatchClockPhase.FullTime;
         match.ClockStartedUtc = null;
+        match.LiveApiKickOffUtc = null;
         match.UseManualClock = true;
         match.UpdatedAt = now;
     }

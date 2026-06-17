@@ -29,6 +29,9 @@ public class Match : BaseEntity
     /// <summary>Liczba nieudanych prób discovery (odds/live bez fixture).</summary>
     public int LiveApiDiscoveryAttempts { get; set; }
 
+    /// <summary>Kickoff UTC z football-data.org (utcDate) — do liczenia minuty na żywo.</summary>
+    public DateTime? LiveApiKickOffUtc { get; set; }
+
     public bool UseManualClock { get; set; }
     public MatchClockPhase ClockPhase { get; set; } = MatchClockPhase.PreMatch;
     public DateTime? ClockStartedUtc { get; set; }
