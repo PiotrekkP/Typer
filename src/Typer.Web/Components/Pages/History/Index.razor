@@ -5,6 +5,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IWebHostEnvironment HostEnvironment
 @using Typer.Application.Matches
+@using Typer.Domain.Enums
 
 <PageTitle>Wyniki — Typer</PageTitle>
 
@@ -20,13 +21,35 @@ else if (_rounds.Count == 0)
 }
 else
 {
+    @if (_liveMatches.Count > 0)
+    {
+        <section class="round-section">
+            <h2 class="round-title">Na żywo</h2>
+            <div class="matches-list">
+                @foreach (var match in _liveMatches)
+                {
+                    <MatchCard Match="match"
+                               IsAuthenticated="_isAuthenticated"
+                               LinkTeams="true" />
+                }
+            </div>
+        </section>
+    }
+
     @foreach (var round in _rounds)
     {
+        var finishedMatches = round.Matches
+            .Where(m => m.Status != nameof(MatchStatus.InProgress))
+            .ToList();
+
+        if (finishedMatches.Count == 0)
+            continue;
+
         <section class="round-section">
             <h2 class="round-title">@round.Name</h2>
 
             <div class="matches-list">
-                @foreach (var match in round.Matches)
+                @foreach (var match in finishedMatches)
                 {
                     <MatchCard Match="match"
                                IsAuthenticated="_isAuthenticated"
@@ -46,6 +69,7 @@ else
 
 @code {
     private IReadOnlyList<RoundWithMatchesDto>? _rounds;
+    private IReadOnlyList<MatchDetailDto> _liveMatches = [];
     private bool _isAuthenticated;
     private string? _userId;
 
@@ -66,6 +90,12 @@ else
         _rounds = await MatchService.GetRoundsWithMatchesAsync(
             userId: _userId,
             scope: MatchRoundsScope.Results);
+
+        _liveMatches = _rounds
+            .SelectMany(r => r.Matches)
+            .Where(m => m.Status == nameof(MatchStatus.InProgress))
+            .OrderByDescending(m => MatchLifecycleRules.EnsureUtc(m.KickOffUtc))
+            .ToList();
 
         SyncRefreshTimer();
     }

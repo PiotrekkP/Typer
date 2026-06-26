@@ -68,15 +68,15 @@ public class MatchService : IMatchService
                     cancellationToken);
         }
 
-        return rounds
+        var roundDtos = rounds
             .Select(round =>
             {
                 var scoped = round.Matches.Where(m => MatchesScope(m, scope)).ToList();
                 var orderedMatches = scope == MatchRoundsScope.Results
-                    ? scoped
-                        .OrderByDescending(m =>
-                            MatchLifecycleRules.GetEffectiveStatus(m.Status, m.KickOffUtc) == MatchStatus.InProgress)
-                        .ThenByDescending(m => m.KickOffUtc)
+                    ? MatchResultsOrderingRules.OrderForResultsPage(
+                        scoped,
+                        m => m.Status,
+                        m => m.KickOffUtc)
                     : scoped.OrderBy(m => m.KickOffUtc);
 
                 var matches = orderedMatches
@@ -89,8 +89,19 @@ public class MatchService : IMatchService
 
                 return new RoundWithMatchesDto(round.Id, round.Name, round.OrderNumber, matches);
             })
-            .Where(round => round.Matches.Count > 0)
-            .ToList();
+            .Where(round => round.Matches.Count > 0);
+
+        if (scope == MatchRoundsScope.Results)
+        {
+            return roundDtos
+                .OrderByDescending(round =>
+                    round.Matches.Any(m => m.Status == nameof(MatchStatus.InProgress)))
+                .ThenByDescending(round =>
+                    round.Matches.Max(m => MatchLifecycleRules.EnsureUtc(m.KickOffUtc)))
+                .ToList();
+        }
+
+        return roundDtos.ToList();
     }
 
     private static bool MatchesScope(Typer.Domain.Entities.Match match, MatchRoundsScope scope)
@@ -333,9 +344,11 @@ public class MatchService : IMatchService
             .Where(m => m.Status != MatchStatus.Cancelled)
             .ToListAsync(cancellationToken);
 
-        return candidates
-            .Where(m => MatchesScope(m, MatchRoundsScope.Results))
-            .OrderByDescending(m => m.KickOffUtc)
+        return MatchResultsOrderingRules
+            .OrderForResultsPage(
+                candidates.Where(m => MatchesScope(m, MatchRoundsScope.Results)),
+                m => m.Status,
+                m => m.KickOffUtc)
             .Select(m => new ResultsMatchOptionDto(
                 m.Id,
                 m.Round != null ? m.Round.Name : "Inne",
@@ -347,7 +360,7 @@ public class MatchService : IMatchService
                 m.AwayTeam.Name,
                 m.AwayTeam.FlagUrl,
                 m.KickOffUtc,
-                m.Status.ToString(),
+                MatchLifecycleRules.GetEffectiveStatusName(m.Status, m.KickOffUtc),
                 m.HomeScore,
                 m.AwayScore))
             .ToList();

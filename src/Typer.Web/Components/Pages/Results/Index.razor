@@ -26,10 +26,21 @@
             <select id="results-match-select"
                     class="results-select"
                     @onchange="OnMatchSelectedAsync">
-                @foreach (var round in _roundGroups)
+                @if (_liveMatches.Any())
                 {
-                    <optgroup label="@round.Key">
-                        @foreach (var match in round)
+                    <optgroup label="Na żywo">
+                        @foreach (var match in _liveMatches)
+                        {
+                            <option value="@match.MatchId" selected="@(match.MatchId == _selectedMatchId)">
+                                @FormatMatchOption(match)
+                            </option>
+                        }
+                    </optgroup>
+                }
+                @if (_finishedMatches.Any())
+                {
+                    <optgroup label="Historia">
+                        @foreach (var match in _finishedMatches)
                         {
                             <option value="@match.MatchId" selected="@(match.MatchId == _selectedMatchId)">
                                 @FormatMatchOption(match)
@@ -139,11 +150,13 @@
     private bool _loadingPredictions;
     private string? _loadError;
 
-    private IEnumerable<IGrouping<string, ResultsMatchOptionDto>> _roundGroups =>
+    private IEnumerable<ResultsMatchOptionDto> _liveMatches =>
+        _matches.Where(m => m.Status == nameof(MatchStatus.InProgress));
+
+    private IEnumerable<ResultsMatchOptionDto> _finishedMatches =>
         _matches
-            .OrderBy(m => m.RoundOrderNumber)
-            .ThenByDescending(m => m.KickOffUtc)
-            .GroupBy(m => m.RoundName);
+            .Where(m => m.Status != nameof(MatchStatus.InProgress))
+            .OrderByDescending(m => MatchLifecycleRules.EnsureUtc(m.KickOffUtc));
 
     private PeriodicTimer? _refreshTimer;
     private CancellationTokenSource? _refreshCts;
@@ -154,8 +167,13 @@
 
         if (_matches.Count > 0)
         {
-            _selectedMatchId = _matches[0].MatchId;
-            _selectedMatch = _matches[0];
+            var defaultMatch = PickDefaultMatch();
+            if (defaultMatch is not null)
+            {
+                _selectedMatchId = defaultMatch.MatchId;
+                _selectedMatch = defaultMatch;
+            }
+
             await LoadPredictionsAsync();
         }
     }
@@ -164,12 +182,16 @@
     {
         _matches = await MatchService.GetResultsMatchOptionsAsync();
         _selectedMatch = _matches.FirstOrDefault(m => m.MatchId == _selectedMatchId)
-            ?? _matches.FirstOrDefault();
+            ?? PickDefaultMatch();
         if (_selectedMatch is not null)
             _selectedMatchId = _selectedMatch.MatchId;
 
         SyncRefreshTimer();
     }
+
+    private ResultsMatchOptionDto? PickDefaultMatch() =>
+        _liveMatches.FirstOrDefault()
+        ?? _finishedMatches.FirstOrDefault();
 
     private void SyncRefreshTimer()
     {
@@ -260,7 +282,7 @@
             ? $" ({match.HomeScore}:{match.AwayScore})"
             : match.Status == "InProgress" ? " (na żywo)" : string.Empty;
 
-        return $"{match.HomeTeamName} – {match.AwayTeamName}{score} · {DisplayTimeRules.FormatPolandTime(match.KickOffUtc, "dd.MM HH:mm")}";
+        return $"{match.HomeTeamName} – {match.AwayTeamName}{score} · {match.RoundName} · {DisplayTimeRules.FormatPolandTime(match.KickOffUtc, "dd.MM HH:mm")}";
     }
 
     private static string FormatPrediction(MatchPredictionResultDto row) =>
