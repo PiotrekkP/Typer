@@ -26,6 +26,24 @@ public class AdminMatchesController : ControllerBase
         return Ok(matches);
     }
 
+    [HttpGet("rounds")]
+    public async Task<ActionResult<IReadOnlyList<AdminRoundOptionDto>>> GetRounds(CancellationToken cancellationToken)
+    {
+        var rounds = await _adminMatchService.GetRoundOptionsAsync(cancellationToken);
+        return Ok(rounds);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateMatch(
+        [FromBody] CreateMatchRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _adminMatchService.CreateMatchAsync(request, cancellationToken);
+        return result.Succeeded
+            ? CreatedAtAction(nameof(GetMatch), new { matchId = result.Data }, new { id = result.Data })
+            : BadRequest(new { error = result.Error });
+    }
+
     [HttpGet("{matchId:guid}")]
     public async Task<ActionResult<AdminMatchDetailDto>> GetMatch(Guid matchId, CancellationToken cancellationToken)
     {

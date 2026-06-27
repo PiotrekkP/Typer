@@ -53,3 +53,11 @@ public record AddGoalScorerRequest(
     bool IsPenalty);
 
 public record SetMatchMinuteRequest(int Minute);
+
+public record AdminRoundOptionDto(Guid Id, string Name, int OrderNumber);
+
+public record CreateMatchRequest(
+    Guid RoundId,
+    Guid HomeTeamId,
+    Guid AwayTeamId,
+    DateTime KickOffUtc);

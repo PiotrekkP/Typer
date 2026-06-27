@@ -51,6 +51,78 @@ public class AdminMatchService : IAdminMatchService
         return matches.Select(MapListItem).ToList();
     }
 
+    public async Task<IReadOnlyList<AdminRoundOptionDto>> GetRoundOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await context.Rounds
+            .AsNoTracking()
+            .OrderBy(r => r.OrderNumber)
+            .Select(r => new AdminRoundOptionDto(r.Id, r.Name, r.OrderNumber))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Result<Guid>> CreateMatchAsync(CreateMatchRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.HomeTeamId == request.AwayTeamId)
+            return Result<Guid>.Failure("Gospodarze i goście muszą być różnymi drużynami.");
+
+        var kickOffUtc = MatchLifecycleRules.EnsureUtc(request.KickOffUtc);
+
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var round = await context.Rounds
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == request.RoundId, cancellationToken);
+
+        if (round is null)
+            return Result<Guid>.Failure("Kolejka nie istnieje.");
+
+        var teamIds = new[] { request.HomeTeamId, request.AwayTeamId };
+        var existingTeams = await context.Teams
+            .AsNoTracking()
+            .Where(t => teamIds.Contains(t.Id))
+            .Select(t => t.Id)
+            .ToListAsync(cancellationToken);
+
+        if (existingTeams.Count != 2)
+            return Result<Guid>.Failure("Wybrana drużyna nie istnieje.");
+
+        var duplicate = await context.Matches.AnyAsync(
+            m => m.HomeTeamId == request.HomeTeamId
+                 && m.AwayTeamId == request.AwayTeamId
+                 && m.KickOffUtc == kickOffUtc,
+            cancellationToken);
+
+        if (duplicate)
+            return Result<Guid>.Failure("Mecz o tej samej parze drużyn i godzinie już istnieje.");
+
+        var now = DateTime.UtcNow;
+        var matchId = Guid.NewGuid();
+
+        context.Matches.Add(new Match
+        {
+            Id = matchId,
+            SeasonId = round.SeasonId,
+            RoundId = round.Id,
+            HomeTeamId = request.HomeTeamId,
+            AwayTeamId = request.AwayTeamId,
+            KickOffUtc = kickOffUtc,
+            Status = MatchStatus.Scheduled,
+            CreatedAt = now
+        });
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Admin: utworzono mecz {MatchId} — kolejka {RoundId}, kickoff {KickOffUtc:O}.",
+            matchId,
+            round.Id,
+            kickOffUtc);
+
+        return Result<Guid>.Success(matchId);
+    }
+
     public async Task<AdminMatchDetailDto?> GetMatchAsync(Guid matchId, CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);

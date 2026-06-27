@@ -8,6 +8,10 @@ public interface IAdminMatchService
 {
     Task<IReadOnlyList<AdminMatchListItemDto>> GetMatchesAsync(CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<AdminRoundOptionDto>> GetRoundOptionsAsync(CancellationToken cancellationToken = default);
+
+    Task<Result<Guid>> CreateMatchAsync(CreateMatchRequest request, CancellationToken cancellationToken = default);
+
     Task<AdminMatchDetailDto?> GetMatchAsync(Guid matchId, CancellationToken cancellationToken = default);
 
     Task<Result> UpdateResultAsync(Guid matchId, UpdateMatchResultRequest request, CancellationToken cancellationToken = default);

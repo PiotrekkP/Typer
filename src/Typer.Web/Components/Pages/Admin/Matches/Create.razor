@@ -1,0 +1,229 @@
+@page "/admin/mecze/nowy"
+@attribute [Authorize(Roles = "Admin")]
+@using Typer.Application.Admin.DTOs
+@using Typer.Application.Admin.Interfaces
+@using Typer.Application.Matches
+@using Typer.Application.Teams.DTOs
+@using Typer.Application.Teams.Interfaces
+
+@inject IAdminMatchService AdminMatchService
+@inject ITeamService TeamService
+@inject NavigationManager Nav
+
+<PageTitle>Admin — nowy mecz</PageTitle>
+
+<div class="admin-page">
+    <header class="admin-header">
+        <a href="/admin/mecze" class="admin-back">← Lista meczów</a>
+        <h1>Nowy mecz</h1>
+        <p class="admin-subtitle">Dodaj mecz do terminarza — godzina w strefie Polski (Europe/Warsaw).</p>
+    </header>
+
+    @if (_loading)
+    {
+        <p class="admin-loading">Ładowanie formularza…</p>
+    }
+    else if (_loadError is not null)
+    {
+        <p class="admin-error">@_loadError</p>
+        <a href="/admin/mecze" class="admin-link">← Wróć do listy</a>
+    }
+    else
+    {
+        @if (_message is not null)
+        {
+            <p class="admin-message @(_messageError ? "admin-error" : "admin-success")">@_message</p>
+        }
+
+        <section class="admin-section">
+            <div class="admin-form-row">
+                <label for="round">Kolejka</label>
+                <select id="round" class="admin-select admin-select--wide" @bind="_roundId">
+                    <option value="@Guid.Empty">— wybierz kolejkę —</option>
+                    @foreach (var round in _rounds)
+                    {
+                        <option value="@round.Id">@RoundLabel(round)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="admin-form-row">
+                <label for="home">Gospodarze</label>
+                <select id="home" class="admin-select admin-select--wide" @bind="_homeTeamId">
+                    <option value="@Guid.Empty">— wybierz drużynę —</option>
+                    @foreach (var team in _teams)
+                    {
+                        <option value="@team.Id">@TeamLabel(team)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="admin-form-row">
+                <label for="away">Goście</label>
+                <select id="away" class="admin-select admin-select--wide" @bind="_awayTeamId">
+                    <option value="@Guid.Empty">— wybierz drużynę —</option>
+                    @foreach (var team in _teams)
+                    {
+                        <option value="@team.Id">@TeamLabel(team)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="admin-form-row">
+                <label for="kickoff-date">Kickoff</label>
+                <input id="kickoff-date"
+                       type="date"
+                       class="admin-input admin-input--date"
+                       @bind="_kickOffDate" />
+                <input id="kickoff-time"
+                       type="time"
+                       class="admin-input admin-input--time"
+                       @bind="_kickOffTime" />
+                <span class="admin-hint">czas PL (Europe/Warsaw)</span>
+            </div>
+
+            <div class="admin-actions">
+                <button class="admin-btn admin-btn--primary" disabled="@_busy" @onclick="CreateAsync">Dodaj mecz</button>
+                <a href="/admin/mecze" class="admin-btn">Anuluj</a>
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<AdminRoundOptionDto> _rounds = [];
+    private IReadOnlyList<TeamDto> _teams = [];
+    private Guid _roundId;
+    private Guid _homeTeamId;
+    private Guid _awayTeamId;
+    private DateOnly _kickOffDate;
+    private TimeOnly _kickOffTime;
+    private bool _loading = true;
+    private bool _busy;
+    private string? _loadError;
+    private string? _message;
+    private bool _messageError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _rounds = await AdminMatchService.GetRoundOptionsAsync();
+            _teams = await TeamService.GetAllAsync();
+
+            if (_rounds.Count == 0)
+            {
+                _loadError = "Brak kolejek w bazie — dodaj kolejkę przed tworzeniem meczów.";
+                return;
+            }
+
+            if (_teams.Count == 0)
+            {
+                _loadError = "Brak drużyn w bazie.";
+                return;
+            }
+
+            _roundId = _rounds[0].Id;
+            (_kickOffDate, _kickOffTime) = DefaultKickOffPoland();
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"Błąd ładowania: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        _message = null;
+        _messageError = false;
+
+        if (_roundId == Guid.Empty)
+        {
+            _message = "Wybierz kolejkę.";
+            _messageError = true;
+            return;
+        }
+
+        if (_homeTeamId == Guid.Empty || _awayTeamId == Guid.Empty)
+        {
+            _message = "Wybierz obie drużyny.";
+            _messageError = true;
+            return;
+        }
+
+        if (_homeTeamId == _awayTeamId)
+        {
+            _message = "Gospodarze i goście muszą być różnymi drużynami.";
+            _messageError = true;
+            return;
+        }
+
+        if (!TryBuildKickOffPoland(_kickOffDate, _kickOffTime, out var kickOffPoland))
+        {
+            _message = "Podaj poprawną datę i godzinę kickoffu.";
+            _messageError = true;
+            return;
+        }
+
+        _busy = true;
+
+        try
+        {
+            var kickOffUtc = DisplayTimeRules.FromPolandTime(kickOffPoland);
+
+            var request = new CreateMatchRequest(_roundId, _homeTeamId, _awayTeamId, kickOffUtc);
+            var result = await AdminMatchService.CreateMatchAsync(request);
+
+            if (!result.Succeeded)
+            {
+                _message = result.Error ?? "Nie udało się utworzyć meczu.";
+                _messageError = true;
+                return;
+            }
+
+            Nav.NavigateTo($"/admin/mecze/{result.Data}");
+        }
+        catch (Exception ex)
+        {
+            _message = ex.Message;
+            _messageError = true;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static bool TryBuildKickOffPoland(DateOnly date, TimeOnly time, out DateTime polandLocal)
+    {
+        polandLocal = new DateTime(date.Year, date.Month, date.Day, time.Hour, time.Minute, 0, DateTimeKind.Unspecified);
+        return true;
+    }
+
+    private static (DateOnly Date, TimeOnly Time) DefaultKickOffPoland()
+    {
+        var polandNow = DisplayTimeRules.ToPolandTime(DateTime.UtcNow);
+        var nextHour = new DateTime(
+            polandNow.Year,
+            polandNow.Month,
+            polandNow.Day,
+            polandNow.Hour,
+            0,
+            0,
+            DateTimeKind.Unspecified).AddHours(1);
+
+        return (DateOnly.FromDateTime(nextHour), TimeOnly.FromDateTime(nextHour));
+    }
+
+    private static string RoundLabel(AdminRoundOptionDto round) =>
+        $"{round.Name} (kolejność {round.OrderNumber})";
+
+    private static string TeamLabel(TeamDto team) =>
+        string.IsNullOrWhiteSpace(team.GroupName)
+            ? team.Name
+            : $"{team.Name} ({team.GroupName})";
+}
